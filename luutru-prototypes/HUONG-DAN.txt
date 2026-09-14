@@ -1,0 +1,28 @@
+HƯỚNG DẪN CHẠY PROTOTYPE
+
+1. Giải nén toàn bộ thư mục.
+2. Mở thư mục luutru-prototypes bằng VS Code, chạy Live Server với dist/index.html.
+   Hoặc tại thư mục luutru-prototypes, nếu đã cài Python, chạy:
+   python -m http.server 8080 --directory dist
+3. Mở http://localhost:8080/index.html (người dùng)
+   Mở http://localhost:8080/admin.html (quản trị)
+
+Nên chạy qua HTTP như trên để dữ liệu chia sẻ và tải tệp hoạt động ổn định.
+Bootstrap đã có sẵn, không cần tải qua CDN.
+
+Tài khoản: nhatanh@demo.vn / minhanh@demo.vn / admin@demo.vn
+Mật khẩu chung: Demo123!
+
+Đây là prototype. Dữ liệu được lưu trong trình duyệt, thanh toán mô phỏng.
+Xem README.md để biết đầy đủ các luồng thao tác và giới hạn.
+
+
+BẢN CẬP NHẬT: MÃ HÓA VÀ THƯ MỤC NHIỀU CẤP
+- Bấm Mã hóa trên tệp/thư mục, nhập mật khẩu ít nhất 8 ký tự và xác nhận.
+- Khi mở, nhập mật khẩu. Bấm Khóa lại hoặc tải lại trang để khóa phiên.
+- Thư mục bảo vệ cả nội dung con và tệp tải lên sau đó.
+- Người được chia sẻ cũng phải biết mật khẩu bảo vệ.
+- Chạy qua localhost hoặc HTTPS để mã hóa hoạt động. Mật khẩu mã hóa không thể khôi phục.
+- Bấm phần chính của thẻ thư mục để xem các thư mục con và tệp trực tiếp bên trong.
+- Dùng đường dẫn phía trên hoặc nút Lên một cấp để quay lại.
+- Ví dụ: Dự án & công việc > Thiết kế giao diện > Bản bàn giao.

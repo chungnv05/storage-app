@@ -1,0 +1,70 @@
+spring:
+  application:
+    name: cloud-drive-backend
+
+  config:
+    import: optional:file:.env[.properties]
+
+  datasource:
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: ${JPA_SHOW_SQL}
+    properties:
+      hibernate:
+        format_sql: true
+
+  cache:
+    type: caffeine
+    cache-names:
+      - storage-packages
+    caffeine:
+      spec: maximumSize=10,expireAfterWrite=30m
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Phải khớp CHÍNH XÁC claim `iss` trong token. Khi chạy Docker, đặt
+          # KC_HOSTNAME cho Keycloak để issuer giống nhau ở mọi môi trường.
+          issuer-uri: ${KEYCLOAK_ISSUER_URI}
+
+      client:
+        registration:
+          keycloak-admin:
+            client-id: ${KEYCLOAK_ADMIN_CLIENT_ID}
+            client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET}
+            authorization-grant-type: client_credentials
+            client-authentication-method: client_secret_post
+        provider:
+          keycloak-admin:
+            token-uri: ${KEYCLOAK_ISSUER_URI}/protocol/openid-connect/token
+
+app:
+  security:
+    # Giá trị bắt buộc phải có trong claim `aud` của access token.
+    audience: ${KEYCLOAK_AUDIENCE}
+    client-id: ${KEYCLOAK_CLIENT_ID}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS}
+  default-package: Free
+
+
+server:
+  port: 8081
+
+keycloak:
+  server-url: ${KEYCLOAK_SERVER_URL}
+  realm: ${KEYCLOAK_REALM}
+  admin-client-registration-id: keycloak-admin
+  connect-timeout: 3s
+  read-timeout: 10s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
