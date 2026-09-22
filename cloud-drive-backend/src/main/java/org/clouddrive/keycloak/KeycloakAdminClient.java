@@ -48,8 +48,8 @@ public class KeycloakAdminClient {
             throw new KeycloakUnavailableException("Không kết nối được tới Keycloak", ex);
         }
 
-        String userId = extractUserId(location);
-        return userId;
+        return extractUserId(location);
+
     }
 
     private String extractUserId(URI location) {
@@ -106,6 +106,7 @@ public class KeycloakAdminClient {
                             + ": " + ex.getResponseBodyAsString(),
                     ex
             );
+
 
         } catch (ResourceAccessException ex) {
             throw new KeycloakUnavailableException(
