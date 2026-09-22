@@ -1,10 +1,11 @@
-package org.clouddrive.user;
+package org.clouddrive.user.dto;
 
 import java.time.LocalDateTime;
 
 import org.clouddrive.common.enums.Role;
 import org.clouddrive.common.enums.UserStatus;
 import org.clouddrive.packages.StoragePackage;
+import org.clouddrive.user.User;
 
 public record UserResponse(
         Long id,

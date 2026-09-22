@@ -5,7 +5,7 @@ import Icon from '../common/Icon.jsx';
 import Avatar from '../common/Avatar.jsx';
 import Badge from '../common/Badge.jsx';
 import useStorage from '../../hooks/useStorage.js';
-import { formatSize, formatMoney, formatDate, GB } from '../../mock/utils.js';
+import { formatSize, formatDate, GB } from '../../mock/utils.js';
 
 function UserDetailModal({ isOpen, onClose, user, onBlockToggle }) {
   const { getPlan, getUserUsedBytes } = useStorage();
@@ -14,15 +14,27 @@ function UserDetailModal({ isOpen, onClose, user, onBlockToggle }) {
   if (!user) return null;
 
   const plan = getPlan(user.plan);
-  const used = getUserUsedBytes(user.id);
-  const remaining = Math.max(0, plan.gb * GB - used);
+  const planName = user.packageName || plan?.name || 'Free';
+  const used = user.storageUsedBytes !== undefined ? user.storageUsedBytes : getUserUsedBytes(user.id);
+  const totalBytes = user.storageLimitBytes || (plan?.gb ? plan.gb * GB : 5 * GB);
+  const totalGb = user.storageLimitBytes
+    ? Math.round(user.storageLimitBytes / (1024 * 1024 * 1024))
+    : (plan?.gb || 0);
+  const remaining = Math.max(0, totalBytes - used);
+
+  const planKey = (user.packageName || plan?.name || user.plan || '').toLowerCase();
+  const badgeVariant = planKey.includes('pro')
+    ? 'purple'
+    : (planKey.includes('premium') || planKey.includes('plus'))
+      ? 'blue'
+      : 'gray';
 
   const details = [
-    { label: 'Tổng dung lượng', value: `${plan.gb} GB` },
-    { label: 'Đã sử dụng (gồm thùng rác)', value: formatSize(used) },
+    { label: 'Tổng dung lượng', value: `${totalGb} GB` },
+    { label: 'Đã sử dụng', value: formatSize(used) },
     { label: 'Dung lượng còn lại', value: formatSize(remaining) },
-    { label: 'Tổng tiền đã thanh toán', value: formatMoney(user.paid || 0) },
-    { label: 'Ngày đăng ký', value: formatDate(user.created) },
+    { label: 'Vai trò', value: user.role || 'USER' },
+    { label: 'Ngày tạo tài khoản', value: formatDate(user.createdAt || user.created) },
     { label: 'Số điện thoại', value: user.phone || 'Chưa cập nhật' }
   ];
 
@@ -36,13 +48,13 @@ function UserDetailModal({ isOpen, onClose, user, onBlockToggle }) {
       <div className="d-flex align-items-center gap-3 mb-4">
         <Avatar user={user} size="large" />
         <div>
-          <h3 className="mb-1">{user.name}</h3>
+          <h3 className="mb-1">{user.name || user.fullName}</h3>
           <span className="small muted">{user.email}</span>
         </div>
       </div>
 
       <div className="mb-4 d-flex gap-2">
-        <Badge variant="blue">{plan.name}</Badge>
+        <Badge variant={badgeVariant}>{planName}</Badge>
         <Badge variant={user.blocked ? 'red' : 'green'}>
           {user.blocked ? 'Đã khóa' : 'Đang hoạt động'}
         </Badge>

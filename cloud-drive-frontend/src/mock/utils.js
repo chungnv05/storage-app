@@ -28,14 +28,21 @@ export function calculateDaysRemaining(deletedTimestamp) {
 
 export function calculateDiscountPrice(plan) {
   if (!plan) return 0;
-  const isDiscountActive =
-    plan.discount > 0 &&
-    plan.until &&
-    new Date(plan.until + 'T23:59:59').getTime() >= Date.now();
-  if (isDiscountActive) {
-    return Math.round(plan.price * (1 - plan.discount / 100));
+  const price = Number(plan.basePrice ?? plan.price ?? 0);
+  const discount = Number(plan.discountPercent ?? plan.discount ?? 0);
+  const until = plan.validTo || plan.until;
+
+  if (discount > 0) {
+    if (until) {
+      const untilDate = String(until).includes('T') ? new Date(until) : new Date(until + 'T23:59:59');
+      if (untilDate.getTime() >= Date.now()) {
+        return Math.round(price * (1 - discount / 100));
+      }
+    } else {
+      return Math.round(price * (1 - discount / 100));
+    }
   }
-  return plan.price;
+  return price;
 }
 
 export function generateId() {

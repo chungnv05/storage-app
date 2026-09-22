@@ -1,11 +1,11 @@
 import React from 'react';
 import Badge from '../common/Badge.jsx';
 
-function UserStatusCard({ users }) {
-  const total = users.length || 1;
-  const activeCount = users.filter(u => !u.blocked).length;
-  const lockedCount = total - activeCount;
-  const activePercent = Math.round((activeCount / total) * 100);
+function UserStatusCard({ users = [], stats = null }) {
+  const total = stats ? stats.totalUsers : (users.length || 0);
+  const activeCount = stats ? stats.activeUsers : users.filter(u => !u.blocked).length;
+  const lockedCount = Math.max(0, total - activeCount);
+  const activePercent = total > 0 ? Math.round((activeCount / total) * 100) : 0;
 
   return (
     <section className="panel chartpanel h-100">
@@ -31,7 +31,7 @@ function UserStatusCard({ users }) {
       </div>
 
       <p className="small muted mt-3 mb-0">
-        Tài khoản bị khóa không thể đăng nhập hoặc truy cập tài liệu trong bản mẫu.
+        Tài khoản bị khóa không thể đăng nhập hoặc truy cập tài liệu trong hệ thống.
       </p>
     </section>
   );

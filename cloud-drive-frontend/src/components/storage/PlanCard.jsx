@@ -7,22 +7,27 @@ import { formatMoney, formatDate, calculateDiscountPrice } from '../../mock/util
 function PlanCard({ plan, isAdmin = false, onAction }) {
   const { currentUser } = useStorage();
 
-  const isCurrentPlan = currentUser.plan === plan.id;
-  const isFeatured = plan.id === 'plus';
+  const planKey = (plan.name || String(plan.id) || '').toLowerCase();
+  const isCurrentPlan =
+    currentUser?.plan === plan.id ||
+    currentUser?.packageName?.toLowerCase() === plan.name?.toLowerCase() ||
+    currentUser?.plan === plan.name?.toLowerCase();
+  const isFeatured = planKey.includes('plus') || planKey.includes('premium');
   const effectivePrice = calculateDiscountPrice(plan);
-  const hasDiscount = effectivePrice < plan.price;
+  const hasDiscount = plan.price > 0 && effectivePrice < plan.price;
 
   const getBadgeText = () => {
     if (!isAdmin && isCurrentPlan) return 'Đang sử dụng';
-    if (plan.id === 'plus') return 'Phổ biến';
-    if (plan.id === 'free') return 'Khởi đầu';
-    return 'Chuyên nghiệp';
+    if (planKey.includes('plus') || planKey.includes('premium')) return 'Phổ biến';
+    if (planKey.includes('free')) return 'Khởi đầu';
+    if (planKey.includes('pro')) return 'Chuyên nghiệp';
+    return 'Tiêu chuẩn';
   };
 
   const getButtonText = () => {
     if (isAdmin) return 'Cấu hình gói';
     if (isCurrentPlan) return 'Gói hiện tại';
-    if (plan.id === 'free') return 'Chuyển về Free';
+    if (planKey.includes('free')) return 'Chuyển về Free';
     return `Chọn gói ${plan.name}`;
   };
 
@@ -53,14 +58,18 @@ function PlanCard({ plan, isAdmin = false, onAction }) {
 
       {hasDiscount ? (
         <p className="small mb-0">
-          <del className="muted">{formatMoney(plan.price)}</del>{' '}
-          <Badge variant="green">Giảm {plan.discount}%</Badge>
+          <del className="muted">{formatMoney(plan.basePrice ?? plan.price)}</del>{' '}
+          <Badge variant="green">Giảm {plan.discountPercent ?? plan.discount}%</Badge>
           <br />
-          <span className="muted">Đến {formatDate(plan.until)}</span>
+          {plan.validTo ? (
+            <span className="muted">Đến {formatDate(plan.validTo)}</span>
+          ) : (
+            <span className="muted">Áp dụng dài hạn</span>
+          )}
         </p>
       ) : (
         <p className="small muted mb-0">
-          {plan.price === 0 ? 'Miễn phí trải nghiệm' : 'Giá minh họa cho prototype'}
+          {(plan.basePrice ?? plan.price) === 0 ? 'Miễn phí trải nghiệm' : 'Thanh toán theo tháng'}
         </p>
       )}
 

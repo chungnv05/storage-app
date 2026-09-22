@@ -7,9 +7,10 @@ function BlockUserModal({ isOpen, onClose, user, onConfirm }) {
   const isBlocked = user.blocked;
   const title = isBlocked ? 'Mở khóa tài khoản?' : 'Khóa tài khoản?';
 
+  const userName = user.name || user.fullName || user.email;
   const message = isBlocked
-    ? `${user.name} (${user.email}) sẽ có thể đăng nhập và tiếp tục sử dụng lại dịch vụ.`
-    : `${user.name} (${user.email}) sẽ không thể đăng nhập hoặc truy cập tài liệu. Dữ liệu được giữ nguyên.`;
+    ? `${userName} (${user.email}) sẽ có thể đăng nhập và tiếp tục sử dụng lại dịch vụ.`
+    : `${userName} (${user.email}) sẽ không thể đăng nhập hoặc truy cập tài liệu. Dữ liệu được giữ nguyên.`;
 
   const handleConfirm = () => {
     onConfirm(user.id);

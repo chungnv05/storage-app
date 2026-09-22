@@ -83,6 +83,7 @@ public class RegistrationService {
         user.setEmail(request.email());
         user.setFullName(request.fullName());
         user.setPhone(request.phone());
+        user.setRole(request.role());
         user.setStoragePackage(storagePackage);
         userRepository.save(user);
     }

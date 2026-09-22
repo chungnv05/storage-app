@@ -3,6 +3,7 @@ package org.clouddrive.config;
 import java.time.Duration;
 import java.util.List;
 
+import org.clouddrive.common.exception.SecurityExceptionHandler;
 import org.clouddrive.common.security.RoleConverter;
 import org.springframework.boot.actuate.info.InfoEndpoint;
 import org.springframework.boot.health.actuate.endpoint.HealthEndpoint;
@@ -49,12 +50,15 @@ public class SecurityConfig {
 
     private final RoleConverter roleConverter;
     private final AppSecurityProperties properties;
+    private final SecurityExceptionHandler securityExceptionHandler;
 
     public SecurityConfig(RoleConverter roleConverter,
-                          AppSecurityProperties properties
+                          AppSecurityProperties properties,
+                          SecurityExceptionHandler securityExceptionHandler
                          ) {
         this.roleConverter = roleConverter;
         this.properties = properties;
+        this.securityExceptionHandler = securityExceptionHandler;
     }
 
     @Bean
@@ -78,6 +82,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/user/**").hasRole("USER")
                         .anyRequest().authenticated()
+                )
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(securityExceptionHandler)
+                        .accessDeniedHandler(securityExceptionHandler)
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(roleConverter))

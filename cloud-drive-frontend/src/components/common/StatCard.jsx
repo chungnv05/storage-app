@@ -18,52 +18,72 @@ function StatCard({
       className={`statcard ${onClick ? 'cursor-pointer' : ''} ${className}`}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between'
+      }}
     >
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        {icon ? (
+      {/* Header: Label on left, Icon on right */}
+      <div className="d-flex justify-content-between align-items-center mb-2">
+        <span
+          className="text-muted fw-medium"
+          style={{ fontSize: '0.875rem' }}
+        >
+          {label}
+        </span>
+        {icon && (
           <span
-            className="fileicon"
             style={{
-              color: iconColor || '#4b82db',
-              background: iconBg || '#eef4ff'
+              color: iconColor || '#3b82f6',
+              background: iconBg || '#eff6ff',
+              width: '40px',
+              height: '40px',
+              borderRadius: '10px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
             }}
           >
             <Icon name={icon} />
           </span>
-        ) : (
-          <span className="small muted">{label}</span>
-        )}
-
-        {subtext && !icon && (
-          <span className="muted">
-            <Icon name={icon || 'chart'} />
-          </span>
-        )}
-
-        {icon && label && <span className="muted small">{label}</span>}
-      </div>
-
-      <div className="d-flex justify-content-between align-items-baseline gap-1">
-        {icon ? (
-          <>
-            <h3 className="mb-0">{subtext}</h3>
-            <strong>{value}</strong>
-          </>
-        ) : (
-          <div>
-            <div className="metric">{value}</div>
-            <span className="small muted">{subtext}</span>
-          </div>
         )}
       </div>
 
+      {/* Main Metric Value */}
+      <div className="my-1">
+        <div
+          style={{
+            fontSize: '1.875rem',
+            fontWeight: 700,
+            lineHeight: 1.2,
+            letterSpacing: '-0.5px'
+          }}
+        >
+          {value}
+        </div>
+      </div>
+
+      {/* Subtext info */}
+      {subtext && (
+        <div
+          className="small text-muted mt-1 text-truncate"
+          title={typeof subtext === 'string' ? subtext : undefined}
+          style={{ fontSize: '0.8125rem' }}
+        >
+          {subtext}
+        </div>
+      )}
+
+      {/* Optional Progress Bar */}
       {progress !== undefined && (
-        <div className="progress">
+        <div className="progress mt-2" style={{ height: '4px' }}>
           <div
             className="progress-bar"
             style={{
               width: `${Math.min(100, Math.max(0, progress))}%`,
-              background: progressBarColor || 'var(--blue)'
+              background: progressBarColor || 'var(--blue, #2563eb)'
             }}
           />
         </div>

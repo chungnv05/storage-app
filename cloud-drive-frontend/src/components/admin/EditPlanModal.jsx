@@ -2,18 +2,23 @@ import React, { useState } from 'react';
 import Modal from '../common/Modal.jsx';
 
 function EditPlanForm({ plan, onSave, onClose }) {
-  const [gb, setGb] = useState(plan.gb);
-  const [price, setPrice] = useState(plan.price);
-  const [discount, setDiscount] = useState(plan.discount || 0);
-  const [until, setUntil] = useState(plan.until || '');
+  const [gb, setGb] = useState(plan.gb || 0);
+  const [basePrice, setBasePrice] = useState(plan.basePrice ?? plan.price ?? 0);
+  const [discountPercent, setDiscountPercent] = useState(plan.discountPercent ?? plan.discount ?? 0);
+  const [validTo, setValidTo] = useState(
+    plan.validTo ? String(plan.validTo).split('T')[0] : (plan.until ? String(plan.until).split('T')[0] : '')
+  );
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const success = onSave(plan.id, {
       gb: Number(gb),
-      price: Number(price),
-      discount: Number(discount),
-      until
+      basePrice: Number(basePrice),
+      price: Number(basePrice),
+      discountPercent: Number(discountPercent),
+      discount: Number(discountPercent),
+      validTo: validTo || null,
+      until: validTo || ''
     });
     if (success) {
       onClose();
@@ -40,7 +45,7 @@ function EditPlanForm({ plan, onSave, onClose }) {
 
       <div className="form-field">
         <label className="form-label" htmlFor="plan-price">
-          Giá mỗi tháng (VNĐ)
+          Giá gốc mỗi tháng (VNĐ)
         </label>
         <input
           id="plan-price"
@@ -49,8 +54,8 @@ function EditPlanForm({ plan, onSave, onClose }) {
           min="0"
           step="1000"
           required
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
+          value={basePrice}
+          onChange={(e) => setBasePrice(e.target.value)}
         />
       </div>
 
@@ -64,21 +69,21 @@ function EditPlanForm({ plan, onSave, onClose }) {
           type="number"
           min="0"
           max="100"
-          value={discount}
-          onChange={(e) => setDiscount(e.target.value)}
+          value={discountPercent}
+          onChange={(e) => setDiscountPercent(e.target.value)}
         />
       </div>
 
       <div className="form-field">
         <label className="form-label" htmlFor="plan-until">
-          Khuyến mãi đến hết ngày
+          Khuyến mãi đến hết ngày (bỏ trống nếu vô thời hạn)
         </label>
         <input
           id="plan-until"
           className="form-control"
           type="date"
-          value={until}
-          onChange={(e) => setUntil(e.target.value)}
+          value={validTo}
+          onChange={(e) => setValidTo(e.target.value)}
         />
         <span className="small muted">Để khuyến mãi 0% nếu không áp dụng ưu đãi.</span>
       </div>
