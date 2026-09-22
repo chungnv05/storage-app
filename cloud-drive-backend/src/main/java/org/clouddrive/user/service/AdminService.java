@@ -1,12 +1,12 @@
-package org.clouddrive.user;
+package org.clouddrive.user.service;
 
 import org.clouddrive.common.enums.Role;
 import org.clouddrive.common.enums.UserStatus;
-import org.clouddrive.packages.StoragePackage;
-import org.clouddrive.packages.StoragePackageRepository;
+import org.clouddrive.packages.repository.StoragePackageRepository;
 import org.clouddrive.packages.dto.StoragePackageResponse;
 import org.clouddrive.user.dto.StatResponse;
 import org.clouddrive.user.dto.UserResponse;
+import org.clouddrive.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

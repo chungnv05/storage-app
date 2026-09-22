@@ -1,10 +1,11 @@
-package org.clouddrive.user;
+package org.clouddrive.user.repository;
 
 import java.util.List;
 import java.util.Optional;
 
 import org.clouddrive.common.enums.Role;
 import org.clouddrive.common.enums.UserStatus;
+import org.clouddrive.user.entiy.User;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 

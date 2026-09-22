@@ -1,9 +1,9 @@
-package org.clouddrive.user;
+package org.clouddrive.user.controller;
 
-import org.clouddrive.packages.StoragePackage;
 import org.clouddrive.packages.dto.StoragePackageResponse;
 import org.clouddrive.user.dto.StatResponse;
 import org.clouddrive.user.dto.UserResponse;
+import org.clouddrive.user.service.AdminService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;

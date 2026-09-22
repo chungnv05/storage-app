@@ -1,11 +1,11 @@
-package org.clouddrive.user;
+package org.clouddrive.user.entiy;
 
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.clouddrive.common.enums.Role;
 import org.clouddrive.common.enums.UserStatus;
-import org.clouddrive.packages.StoragePackage;
+import org.clouddrive.packages.entity.StoragePackage;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 

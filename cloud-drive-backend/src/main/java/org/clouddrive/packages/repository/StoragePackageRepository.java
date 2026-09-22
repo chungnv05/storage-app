@@ -1,6 +1,7 @@
-package org.clouddrive.packages;
+package org.clouddrive.packages.repository;
 
 import org.clouddrive.packages.dto.StoragePackageResponse;
+import org.clouddrive.packages.entity.StoragePackage;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;

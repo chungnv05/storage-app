@@ -4,8 +4,8 @@ import java.time.LocalDateTime;
 
 import org.clouddrive.common.enums.Role;
 import org.clouddrive.common.enums.UserStatus;
-import org.clouddrive.packages.StoragePackage;
-import org.clouddrive.user.User;
+import org.clouddrive.packages.entity.StoragePackage;
+import org.clouddrive.user.entiy.User;
 
 public record UserResponse(
         Long id,

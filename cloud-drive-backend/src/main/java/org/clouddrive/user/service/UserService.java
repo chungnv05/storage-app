@@ -1,7 +1,8 @@
-package org.clouddrive.user;
+package org.clouddrive.user.service;
 
 import org.clouddrive.common.exception.UserNotFoundException;
 import org.clouddrive.user.dto.UserResponse;
+import org.clouddrive.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

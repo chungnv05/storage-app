@@ -1,6 +1,7 @@
-package org.clouddrive.user;
+package org.clouddrive.user.controller;
 
 import org.clouddrive.user.dto.UserResponse;
+import org.clouddrive.user.service.UserService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;

@@ -1,4 +1,4 @@
-package org.clouddrive.packages;
+package org.clouddrive.packages.entity;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;

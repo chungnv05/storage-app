@@ -1,4 +1,4 @@
-package org.clouddrive.packages;
+package org.clouddrive.packages.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
