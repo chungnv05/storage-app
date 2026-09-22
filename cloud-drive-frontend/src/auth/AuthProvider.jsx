@@ -8,6 +8,15 @@ import React, {
 import AuthContext from './AuthContext';
 import keycloak from './keycloak';
 
+function normalizeRole(role) {
+  if (!role || typeof role !== 'string') return '';
+  const upper = role.trim().toUpperCase();
+  if (upper.startsWith('ROLE_')) {
+    return upper.slice(5);
+  }
+  return upper;
+}
+
 function AuthProvider({ children }) {
   // Trạng thái khởi tạo Keycloak (đã xong hay chưa)
   const [isInitialized, setIsInitialized] = useState(false);
@@ -44,13 +53,16 @@ function AuthProvider({ children }) {
       tokenParsed.resource_access?.[import.meta.env.VITE_KEYCLOAK_CLIENT_ID]
         ?.roles || [];
 
+    const rawRoles = [...new Set([...realmRoles, ...clientRoles])];
+    const normalizedRoles = [...new Set(rawRoles.map(normalizeRole).filter(Boolean))];
+
     return {
       username: tokenParsed.preferred_username || null,
       email: tokenParsed.email || null,
       firstName: tokenParsed.given_name || null,
       lastName: tokenParsed.family_name || null,
-      // Hợp nhất và loại bỏ các role trùng lặp
-      roles: [...new Set([...realmRoles, ...clientRoles])],
+      roles: normalizedRoles,
+      rawRoles,
     };
   }, []);
 
@@ -105,7 +117,9 @@ function AuthProvider({ children }) {
    * Chuyển hướng sang trang đăng nhập của Keycloak.
    */
   const login = useCallback(async () => {
-    await keycloak.login();
+    await keycloak.login({
+      redirectUri: `${window.location.origin}/`,
+    });
   }, []);
 
   /**
@@ -178,6 +192,41 @@ function AuthProvider({ children }) {
     return () => clearInterval(interval);
   }, [isInitialized, isAuthenticated, refreshToken]);
 
+  // Danh sách role đang hoạt động từ user
+  const activeRoles = useMemo(() => {
+    if (user?.roles && user.roles.length > 0) {
+      return user.roles;
+    }
+    return [];
+  }, [user]);
+
+  /**
+   * Kiểm tra người dùng có role cụ thể hay không (không phân biệt hoa thường).
+   */
+  const hasRole = useCallback(
+    (requiredRole) => {
+      if (!requiredRole) return true;
+      const target = normalizeRole(requiredRole);
+      return activeRoles.includes(target);
+    },
+    [activeRoles]
+  );
+
+  /**
+   * Kiểm tra người dùng có ít nhất một trong các role được chỉ định hay không.
+   */
+  const hasAnyRole = useCallback(
+    (targetRoles) => {
+      if (!targetRoles || (Array.isArray(targetRoles) && targetRoles.length === 0)) return true;
+      const targets = Array.isArray(targetRoles) ? targetRoles : [targetRoles];
+      return targets.some((role) => hasRole(role));
+    },
+    [hasRole]
+  );
+
+  const isAdmin = useMemo(() => hasRole('ADMIN'), [hasRole]);
+  const isUser = useMemo(() => hasRole('USER'), [hasRole]);
+
   // Gói các giá trị và hàm cần cung cấp cho toàn bộ ứng dụng thông qua Context
   const value = useMemo(
     () => ({
@@ -185,6 +234,11 @@ function AuthProvider({ children }) {
       isAuthenticated,
       user,
       token,
+      roles: activeRoles,
+      hasRole,
+      hasAnyRole,
+      isAdmin,
+      isUser,
       login,
       logout,
       refreshToken,
@@ -194,6 +248,11 @@ function AuthProvider({ children }) {
       isAuthenticated,
       user,
       token,
+      activeRoles,
+      hasRole,
+      hasAnyRole,
+      isAdmin,
+      isUser,
       login,
       logout,
       refreshToken,
