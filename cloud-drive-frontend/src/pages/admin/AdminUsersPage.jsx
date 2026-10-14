@@ -3,16 +3,16 @@ import AdminUsersTable from '../../components/admin/AdminUsersTable.jsx';
 import UserDetailModal from '../../components/admin/UserDetailModal.jsx';
 import BlockUserModal from '../../components/admin/BlockUserModal.jsx';
 import Icon from '../../components/common/Icon.jsx';
-import usePlans from '../../hooks/usePlans.js';
 import useAdminUsers from '../../hooks/useAdminUsers.js';
 import useStorage from '../../hooks/useStorage.js';
+import usePackages from '../../hooks/usePackages.js';
 
 function AdminUsersPage() {
   const {
     users = [],
     loading: loadingUsers,
     error: errorUsers,
-    adminBlockUser,
+    updateUserStatus,
     refetchUsers
   } = useAdminUsers();
 
@@ -21,7 +21,7 @@ function AdminUsersPage() {
     loading: loadingPlans,
     error: errorPlans,
     refetchPlans
-  } = usePlans();
+  } = usePackages();
 
   const { searchQuery: globalSearchQuery } = useStorage();
 
@@ -29,6 +29,7 @@ function AdminUsersPage() {
   const [selectedPlanFilter, setSelectedPlanFilter] = useState('');
   const [selectedUserForDetail, setSelectedUserForDetail] = useState(null);
   const [selectedUserForBlock, setSelectedUserForBlock] = useState(null);
+  const [notification, setNotification] = useState('');
 
   const filterPills = useMemo(() => {
     return [
@@ -86,9 +87,24 @@ function AdminUsersPage() {
     return list;
   }, [users, selectedPlanFilter, searchQuery, globalSearchQuery, plans]);
 
+  const currentUserDetail = useMemo(() => {
+    if (!selectedUserForDetail) return null;
+    return users.find(u => u.id === selectedUserForDetail.id) || selectedUserForDetail;
+  }, [selectedUserForDetail, users]);
+
   const handleRefresh = () => {
     if (refetchUsers) refetchUsers();
     if (refetchPlans) refetchPlans();
+  };
+
+  const handleConfirmStatusChange = async (userId, targetStatus) => {
+    const result = await updateUserStatus(userId, targetStatus);
+    if (result && result.success) {
+      const isLocked = (result.status || targetStatus) === 'LOCKED';
+      setNotification(isLocked ? 'Đã khóa tài khoản thành công.' : 'Đã mở khóa tài khoản thành công.');
+      setTimeout(() => setNotification(''), 4000);
+    }
+    return result;
   };
 
   return (
@@ -118,6 +134,18 @@ function AdminUsersPage() {
           </button>
         </div>
       </div>
+
+      {notification && (
+        <div className="alert alert-success d-flex justify-content-between align-items-center mb-4">
+          <span>{notification}</span>
+          <button
+            type="button"
+            className="btn-close"
+            onClick={() => setNotification('')}
+            aria-label="Đóng"
+          />
+        </div>
+      )}
 
       <div className="pills mb-4">
         {filterPills.map(({ value, label, count }) => (
@@ -163,7 +191,7 @@ function AdminUsersPage() {
       <UserDetailModal
         isOpen={Boolean(selectedUserForDetail)}
         onClose={() => setSelectedUserForDetail(null)}
-        user={selectedUserForDetail}
+        user={currentUserDetail}
         onBlockToggle={(u) => setSelectedUserForBlock(u)}
       />
 
@@ -171,7 +199,7 @@ function AdminUsersPage() {
         isOpen={Boolean(selectedUserForBlock)}
         onClose={() => setSelectedUserForBlock(null)}
         user={selectedUserForBlock}
-        onConfirm={(uid) => adminBlockUser(uid)}
+        onConfirm={handleConfirmStatusChange}
       />
     </div>
   );

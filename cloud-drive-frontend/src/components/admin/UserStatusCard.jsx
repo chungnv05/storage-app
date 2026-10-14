@@ -3,7 +3,7 @@ import Badge from '../common/Badge.jsx';
 
 function UserStatusCard({ users = [], stats = null }) {
   const total = stats ? stats.totalUsers : (users.length || 0);
-  const activeCount = stats ? stats.activeUsers : users.filter(u => !u.blocked).length;
+  const activeCount = stats ? stats.activeUsers : users.filter(u => !u.blocked && u.status !== 'LOCKED').length;
   const lockedCount = Math.max(0, total - activeCount);
   const activePercent = total > 0 ? Math.round((activeCount / total) * 100) : 0;
 

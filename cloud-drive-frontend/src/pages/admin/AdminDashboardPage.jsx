@@ -7,7 +7,7 @@ import UserStatusCard from '../../components/admin/UserStatusCard.jsx';
 import AdminUsersTable from '../../components/admin/AdminUsersTable.jsx';
 import UserDetailModal from '../../components/admin/UserDetailModal.jsx';
 import BlockUserModal from '../../components/admin/BlockUserModal.jsx';
-import usePlans from '../../hooks/usePlans.js';
+import usePackages from '../../hooks/usePackages.js';
 import useAdminUsers from '../../hooks/useAdminUsers.js';
 import useAdminStats from '../../hooks/useAdminStats.js';
 import { formatSize, formatMoney, formatDate } from '../../mock/utils.js';
@@ -24,7 +24,7 @@ function AdminDashboardPage() {
     users = [],
     loading: loadingUsers,
     error: errorUsers,
-    adminBlockUser,
+    updateUserStatus,
     refetchUsers
   } = useAdminUsers();
 
@@ -33,12 +33,18 @@ function AdminDashboardPage() {
     loading: loadingPlans,
     error: errorPlans,
     refetchPlans
-  } = usePlans();
+  } = usePackages();
 
   const navigate = useNavigate();
 
   const [selectedUserForDetail, setSelectedUserForDetail] = useState(null);
   const [selectedUserForBlock, setSelectedUserForBlock] = useState(null);
+  const [notification, setNotification] = useState('');
+
+  const currentUserDetail = useMemo(() => {
+    if (!selectedUserForDetail) return null;
+    return users.find(u => u.id === selectedUserForDetail.id) || selectedUserForDetail;
+  }, [selectedUserForDetail, users]);
 
   // Use stats from API /api/admin/stats, with fallback to users calculations
   const totalUsers = stats ? stats.totalUsers : users.length;
@@ -73,6 +79,17 @@ function AdminDashboardPage() {
     if (refetchPlans) refetchPlans();
   };
 
+  const handleConfirmStatusChange = async (userId, targetStatus) => {
+    const result = await updateUserStatus(userId, targetStatus);
+    if (result && result.success) {
+      const isLocked = (result.status || targetStatus) === 'LOCKED';
+      setNotification(isLocked ? 'Đã khóa tài khoản thành công.' : 'Đã mở khóa tài khoản thành công.');
+      setTimeout(() => setNotification(''), 4000);
+      if (refetchStats) refetchStats();
+    }
+    return result;
+  };
+
   const isLoading = (loadingStats && !stats) && ((loadingUsers || loadingPlans) && users.length === 0);
   const errorMessage = errorStats || errorUsers || errorPlans;
 
@@ -98,6 +115,18 @@ function AdminDashboardPage() {
           </button>
         </div>
       </div>
+
+      {notification && (
+        <div className="alert alert-success d-flex justify-content-between align-items-center mb-4">
+          <span>{notification}</span>
+          <button
+            type="button"
+            className="btn-close"
+            onClick={() => setNotification('')}
+            aria-label="Đóng"
+          />
+        </div>
+      )}
 
       {isLoading ? (
         <div className="panel p-5 text-center mb-4">
@@ -208,7 +237,7 @@ function AdminDashboardPage() {
       <UserDetailModal
         isOpen={Boolean(selectedUserForDetail)}
         onClose={() => setSelectedUserForDetail(null)}
-        user={selectedUserForDetail}
+        user={currentUserDetail}
         onBlockToggle={(u) => setSelectedUserForBlock(u)}
       />
 
@@ -216,7 +245,7 @@ function AdminDashboardPage() {
         isOpen={Boolean(selectedUserForBlock)}
         onClose={() => setSelectedUserForBlock(null)}
         user={selectedUserForBlock}
-        onConfirm={(uid) => adminBlockUser(uid)}
+        onConfirm={handleConfirmStatusChange}
       />
     </div>
   );

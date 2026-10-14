@@ -1,12 +1,12 @@
 package org.clouddrive.user.controller;
 
+import org.clouddrive.common.enums.UserStatus;
 import org.clouddrive.packages.dto.StoragePackageResponse;
+import org.clouddrive.packages.service.StoragePackageService;
 import org.clouddrive.user.dto.StatResponse;
 import org.clouddrive.user.dto.UserResponse;
 import org.clouddrive.user.service.AdminService;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -14,9 +14,11 @@ import java.util.List;
 @RequestMapping("/api/admin")
 public class AdminController {
     private final AdminService adminService;
+    private final StoragePackageService storagePackageService;
 
-    public AdminController(AdminService adminService) {
+    public AdminController(AdminService adminService, StoragePackageService storagePackageService) {
         this.adminService = adminService;
+        this.storagePackageService = storagePackageService;
     }
 
     @GetMapping("/users")
@@ -26,12 +28,17 @@ public class AdminController {
 
     @GetMapping("/packages")
     public List<StoragePackageResponse> getAllPackages() {
-        return adminService.getAllActivePackages();
+        return storagePackageService.getAllActivePackages();
     }
 
     @GetMapping("/stats")
     public StatResponse getStats() {
         return adminService.getStats();
+    }
+
+    @PutMapping("/users/{userId}/status")
+    public void updateUserStatus(@PathVariable Long userId, @RequestParam UserStatus status) {
+        adminService.updateUserStatus(userId, status);
     }
 
 

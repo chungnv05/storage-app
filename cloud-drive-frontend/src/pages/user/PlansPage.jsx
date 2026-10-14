@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import Icon from '../../components/common/Icon.jsx';
 import PlanCard from '../../components/storage/PlanCard.jsx';
 import BuyPlanModal from '../../components/storage/BuyPlanModal.jsx';
-import useAuth from '../../hooks/useAuth.js';
+import useStorage from '../../hooks/useStorage.js';
 
 function PlansPage() {
-  const { plans, buyPlan } = useAuth();
+  const { plans, buyPlan } = useStorage();
   const [selectedPlanForBuy, setSelectedPlanForBuy] = useState(null);
 
   const handleSelectPlan = (plan) => {

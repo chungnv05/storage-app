@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
 import Icon from '../../components/common/Icon.jsx';
 import PlanCard from '../../components/storage/PlanCard.jsx';
-import EditPlanModal from '../../components/admin/EditPlanModal.jsx';
-import usePlans from '../../hooks/usePlans.js';
+import EditPlanModal from '../../components/admin/EditPackageModal.jsx';
+import usePackages from '../../hooks/usePackages.js';
 
-function AdminPlansPage() {
-  const { plans = [], loading, error, refetchPlans, updatePlan } = usePlans();
+function AdminPackagesPage() {
+  const { plans = [], loading, error, refetchPackages, updatePlan } = usePackages();
   const [selectedPlanForEdit, setSelectedPlanForEdit] = useState(null);
   const [notification, setNotification] = useState('');
 
-  const handleEditPlan = (plan) => {
+  const handleEditPackage = (plan) => {
     setSelectedPlanForEdit(plan);
   };
 
-  const handleSavePlan = (planId, updatedFields) => {
+  const handleSavePackage = (planId, updatedFields) => {
     const success = updatePlan ? updatePlan(planId, updatedFields) : false;
     if (success) {
       setNotification('Đã cập nhật cấu hình gói cước thành công.');
@@ -34,7 +34,7 @@ function AdminPlansPage() {
           <button
             type="button"
             className="btn btn-light"
-            onClick={refetchPlans}
+            onClick={refetchPackages}
             title="Làm mới danh sách gói"
           >
             <Icon name="refresh" /> Làm mới
@@ -69,7 +69,7 @@ function AdminPlansPage() {
           <button
             type="button"
             className="btn btn-sm btn-outline-danger"
-            onClick={refetchPlans}
+            onClick={refetchPackages}
           >
             Thử lại
           </button>
@@ -81,7 +81,7 @@ function AdminPlansPage() {
               key={plan.id}
               plan={plan}
               isAdmin={true}
-              onAction={handleEditPlan}
+              onAction={handleEditPackage}
             />
           ))}
         </div>
@@ -105,10 +105,10 @@ function AdminPlansPage() {
         isOpen={Boolean(selectedPlanForEdit)}
         onClose={() => setSelectedPlanForEdit(null)}
         plan={selectedPlanForEdit}
-        onSave={handleSavePlan}
+        onSave={handleSavePackage}
       />
     </div>
   );
 }
 
-export default AdminPlansPage;
+export default AdminPackagesPage;

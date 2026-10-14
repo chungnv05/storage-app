@@ -4,9 +4,11 @@ import java.net.URI;
 import java.util.List;
 
 import org.clouddrive.common.enums.Role;
+import org.clouddrive.common.enums.UserStatus;
 import org.clouddrive.common.exception.InfoAlreadyExistsException;
 import org.clouddrive.common.exception.KeycloakIntegrationException;
 import org.clouddrive.common.exception.KeycloakUnavailableException;
+import org.clouddrive.common.util.NameUtil;
 import org.clouddrive.keycloak.representation.RoleRepresentation;
 import org.clouddrive.keycloak.representation.UserRepresentation;
 import org.springframework.stereotype.Component;
@@ -133,4 +135,122 @@ public class KeycloakAdminClient {
             throw new KeycloakUnavailableException("Không kết nối được tới Keycloak", ex);
         }
     }
+
+    public UserRepresentation getUser(String userId) {
+        try {
+            return keycloakAdminRestClient
+                    .get()
+                    .uri("/users/{userId}", userId)
+                    .retrieve()
+                    .body(UserRepresentation.class);
+
+        } catch (HttpClientErrorException.NotFound ex) {
+            throw new KeycloakIntegrationException(
+                    "Không tìm thấy user " + userId + " trên Keycloak",
+                    ex
+            );
+
+        } catch (RestClientResponseException ex) {
+            throw new KeycloakIntegrationException(
+                    "Keycloak trả về " + ex.getStatusCode()
+                            + " khi lấy user " + userId
+                            + ": " + ex.getResponseBodyAsString(),
+                    ex
+            );
+
+        } catch (ResourceAccessException ex) {
+            throw new KeycloakUnavailableException(
+                    "Không kết nối được tới Keycloak",
+                    ex
+            );
+        }
+    }
+
+    public void updateUserStatus(String keycloakUserId, boolean enabled) {
+        UserRepresentation currentUser = getUser(keycloakUserId);
+
+        UserRepresentation updatedUser = new UserRepresentation(
+                currentUser.username(),
+                currentUser.email(),
+                currentUser.firstName(),
+                currentUser.lastName(),
+                enabled,
+                currentUser.emailVerified(),
+                currentUser.credentials()
+        );
+
+        try {
+            keycloakAdminRestClient
+                    .put()
+                    .uri("/users/{userId}", keycloakUserId)
+                    .body(updatedUser)
+                    .retrieve()
+                    .toBodilessEntity();
+
+        } catch (HttpClientErrorException.NotFound ex) {
+            throw new KeycloakIntegrationException(
+                    "Không tìm thấy user " + keycloakUserId + " trên Keycloak",
+                    ex
+            );
+
+        } catch (RestClientResponseException ex) {
+            throw new KeycloakIntegrationException(
+                    "Keycloak trả về " + ex.getStatusCode()
+                            + " khi cập nhật trạng thái user "
+                            + keycloakUserId
+                            + ": " + ex.getResponseBodyAsString(),
+                    ex
+            );
+
+        } catch (ResourceAccessException ex) {
+            throw new KeycloakUnavailableException(
+                    "Không kết nối được tới Keycloak",
+                    ex
+            );
+        }
+    }
+
+    public void updateUser(String keycloakUserId, String fullName, String email, String phone) {
+        UserRepresentation currentUser = getUser(keycloakUserId);
+
+        String[] nameParts = NameUtil.splitFullName(fullName);
+        String firstName = nameParts[0];
+        String lastName = nameParts[1];
+
+        UserRepresentation updatedUser = new UserRepresentation(
+                currentUser.username(),
+                email,
+                firstName,
+                lastName,
+                currentUser.enabled(),
+                currentUser.emailVerified(),
+                currentUser.credentials()
+        );
+
+        try {
+            keycloakAdminRestClient
+                    .put()
+                    .uri("/users/{userId}", keycloakUserId)
+                    .body(updatedUser)
+                    .retrieve()
+                    .toBodilessEntity();
+
+        } catch (HttpClientErrorException.Conflict ex) {
+            throw new InfoAlreadyExistsException("Email đã tồn tại");
+        } catch (RestClientResponseException ex) {
+            throw new KeycloakIntegrationException(
+                    "Keycloak trả về " + ex.getStatusCode()
+                            + " khi cập nhật thông tin user "
+                            + keycloakUserId
+                            + ": " + ex.getResponseBodyAsString(),
+                    ex
+            );
+        } catch (ResourceAccessException ex) {
+            throw new KeycloakUnavailableException(
+                    "Không kết nối được tới Keycloak",
+                    ex
+            );
+        }
+    }
+
 }

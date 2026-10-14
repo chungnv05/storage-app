@@ -1,10 +1,13 @@
 package org.clouddrive.packages.service;
 
+import org.clouddrive.packages.dto.StoragePackageResponse;
 import org.clouddrive.packages.entity.StoragePackage;
 import org.clouddrive.packages.repository.StoragePackageRepository;
 import org.springframework.cache.annotation.Cacheable;
 import org.clouddrive.common.exception.PackageNotFoundException;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class StoragePackageService {
@@ -20,4 +23,9 @@ public class StoragePackageService {
                 .orElseThrow(() ->
                         new PackageNotFoundException("Không tìm thấy gói: " + packageName));
     }
+
+    public List<StoragePackageResponse> getAllActivePackages() {
+        return storagePackageRepository.findAllActivePackagesWithPrice();
+    }
+
 }

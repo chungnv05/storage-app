@@ -43,6 +43,8 @@ function UserDetailModal({ isOpen, onClose, user, onBlockToggle }) {
     navigate('/admin/broadcast', { state: { targetUserId: user.id } });
   };
 
+  const isBlocked = user.blocked || user.status === 'LOCKED';
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Chi tiết người dùng">
       <div className="d-flex align-items-center gap-3 mb-4">
@@ -55,8 +57,8 @@ function UserDetailModal({ isOpen, onClose, user, onBlockToggle }) {
 
       <div className="mb-4 d-flex gap-2">
         <Badge variant={badgeVariant}>{planName}</Badge>
-        <Badge variant={user.blocked ? 'red' : 'green'}>
-          {user.blocked ? 'Đã khóa' : 'Đang hoạt động'}
+        <Badge variant={isBlocked ? 'red' : 'green'}>
+          {isBlocked ? 'Đã khóa' : 'Đang hoạt động'}
         </Badge>
       </div>
 
@@ -87,8 +89,8 @@ function UserDetailModal({ isOpen, onClose, user, onBlockToggle }) {
             onBlockToggle(user);
           }}
         >
-          <Icon name={user.blocked ? 'refresh' : 'lock'} />
-          {user.blocked ? 'Mở khóa' : 'Khóa tài khoản'}
+          <Icon name={isBlocked ? 'refresh' : 'lock'} />
+          {isBlocked ? 'Mở khóa' : 'Khóa tài khoản'}
         </button>
       </div>
     </Modal>

@@ -52,6 +52,8 @@ function AdminUsersTable({ users, onSelectUser, onBlockToggle }) {
                   ? 'blue'
                   : 'gray';
 
+              const isBlocked = u.blocked || u.status === 'LOCKED';
+
               return (
                 <tr key={u.id}>
                   <td>
@@ -90,8 +92,8 @@ function AdminUsersTable({ users, onSelectUser, onBlockToggle }) {
                   </td>
 
                   <td>
-                    <Badge variant={u.blocked ? 'red' : 'green'}>
-                      {u.blocked ? 'Đã khóa' : 'Hoạt động'}
+                    <Badge variant={isBlocked ? 'red' : 'green'}>
+                      {isBlocked ? 'Đã khóa' : 'Hoạt động'}
                     </Badge>
                   </td>
 
@@ -108,10 +110,11 @@ function AdminUsersTable({ users, onSelectUser, onBlockToggle }) {
                       <button
                         type="button"
                         className="iconbtn"
-                        aria-label={`${u.blocked ? 'Mở khóa' : 'Khóa'} ${u.name || u.fullName}`}
+                        title={isBlocked ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
+                        aria-label={`${isBlocked ? 'Mở khóa' : 'Khóa'} ${u.name || u.fullName}`}
                         onClick={() => onBlockToggle(u)}
                       >
-                        <Icon name={u.blocked ? 'refresh' : 'lock'} />
+                        <Icon name={isBlocked ? 'refresh' : 'lock'} />
                       </button>
                     </div>
                   </td>

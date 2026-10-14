@@ -48,21 +48,47 @@ export default function useAdminUsers() {
     }
   }, []);
 
-  const adminBlockUser = useCallback((userId) => {
-    setUsers(prev =>
-      prev.map(u => {
-        if (u.id === userId) {
-          const nextBlocked = !u.blocked;
-          return {
-            ...u,
-            blocked: nextBlocked,
-            status: nextBlocked ? 'LOCKED' : 'ACTIVE'
-          };
-        }
-        return u;
-      })
-    );
-  }, []);
+  const updateUserStatus = useCallback(async (userId, targetStatus) => {
+    let newStatus = targetStatus;
+    if (!newStatus) {
+      const currentUser = users.find(u => u.id === userId);
+      const isCurrentlyBlocked = currentUser?.blocked || currentUser?.status === 'LOCKED';
+      newStatus = isCurrentlyBlocked ? 'ACTIVE' : 'LOCKED';
+    } else if (typeof newStatus === 'string') {
+      newStatus = newStatus.toUpperCase();
+    }
+
+    try {
+      await adminApi.updateUserStatus(userId, newStatus);
+      const isBlocked = newStatus === 'LOCKED';
+
+      setUsers(prev =>
+        prev.map(u => {
+          if (u.id === userId) {
+            return {
+              ...u,
+              blocked: isBlocked,
+              status: newStatus
+            };
+          }
+          return u;
+        })
+      );
+      return { success: true, status: newStatus };
+    } catch (err) {
+      console.error('Lỗi khi cập nhật trạng thái người dùng:', err);
+      const errorMsg =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        'Không thể cập nhật trạng thái người dùng';
+      return { success: false, error: errorMsg };
+    }
+  }, [users]);
+
+  const adminBlockUser = useCallback((userId, targetStatus) => {
+    return updateUserStatus(userId, targetStatus);
+  }, [updateUserStatus]);
 
   useEffect(() => {
     let isMounted = true;
@@ -92,6 +118,7 @@ export default function useAdminUsers() {
     loading,
     error,
     adminBlockUser,
+    updateUserStatus,
     refetchUsers: fetchUsers
   };
 }

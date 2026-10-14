@@ -13,7 +13,7 @@ import NotificationsPage from '../pages/user/NotificationsPage.jsx';
 
 import AdminDashboardPage from '../pages/admin/AdminDashboardPage.jsx';
 import AdminUsersPage from '../pages/admin/AdminUsersPage.jsx';
-import AdminPlansPage from '../pages/admin/AdminPlansPage.jsx';
+import AdminPlansPage from '../pages/admin/AdminPackagesPage.jsx';
 import AdminBroadcastPage from '../pages/admin/AdminBroadcastPage.jsx';
 
 import ProtectedRoute from '../auth/ProtectedRoute.jsx';
