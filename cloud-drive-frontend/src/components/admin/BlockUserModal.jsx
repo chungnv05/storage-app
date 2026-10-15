@@ -7,10 +7,10 @@ function BlockUserModal({ isOpen, onClose, user, onConfirm }) {
 
   if (!user) return null;
 
-  const isBlocked = user.blocked || user.status === 'LOCKED';
+  const isBlocked = user.status === 'LOCKED';
   const title = isBlocked ? 'Mở khóa tài khoản?' : 'Khóa tài khoản?';
 
-  const userName = user.name || user.fullName || user.email;
+  const userName = user.fullName || user.email;
   const message = isBlocked
     ? `${userName} (${user.email}) sẽ có thể đăng nhập và tiếp tục sử dụng lại dịch vụ.`
     : `${userName} (${user.email}) sẽ không thể đăng nhập hoặc truy cập tài liệu. Dữ liệu được giữ nguyên.`;
@@ -27,15 +27,10 @@ function BlockUserModal({ isOpen, onClose, user, onConfirm }) {
     setError(null);
     try {
       const nextStatus = isBlocked ? 'ACTIVE' : 'LOCKED';
-      const result = await onConfirm(user.id, nextStatus);
-      if (result && result.success === false) {
-        setError(result.error || 'Có lỗi xảy ra khi cập nhật trạng thái.');
-      } else {
-        setError(null);
-        onClose();
-      }
+      await onConfirm(user.id, nextStatus);
+      onClose();
     } catch (err) {
-      setError(err?.message || 'Có lỗi xảy ra khi cập nhật trạng thái.');
+      setError(err.message);
     } finally {
       setSubmitting(false);
     }

@@ -1,33 +1,20 @@
-import React, { useState } from 'react';
+import React from 'react';
 import Icon from '../../components/common/Icon.jsx';
 import PlanCard from '../../components/storage/PlanCard.jsx';
-import EditPlanModal from '../../components/admin/EditPackageModal.jsx';
+import EmptyState from '../../components/common/EmptyState.jsx';
+import { LoadingPanel, ErrorAlert } from '../../components/common/PageStatus.jsx';
 import usePackages from '../../hooks/usePackages.js';
+import adminApi from '../../api/adminApi.js';
 
 function AdminPackagesPage() {
-  const { plans = [], loading, error, refetchPackages, updatePlan } = usePackages();
-  const [selectedPlanForEdit, setSelectedPlanForEdit] = useState(null);
-  const [notification, setNotification] = useState('');
-
-  const handleEditPackage = (plan) => {
-    setSelectedPlanForEdit(plan);
-  };
-
-  const handleSavePackage = (planId, updatedFields) => {
-    const success = updatePlan ? updatePlan(planId, updatedFields) : false;
-    if (success) {
-      setNotification('Đã cập nhật cấu hình gói cước thành công.');
-      setTimeout(() => setNotification(''), 4000);
-    }
-    return success;
-  };
+  const { packages, loading, error, refetchPackages } = usePackages(adminApi.getAllPackages);
 
   return (
     <div className="admin-plans-page">
       <div className="pagehead">
         <div>
           <h1 className="mb-0">Gói &amp; khuyến mãi</h1>
-          <p>Quản lý dung lượng, giá bán và ưu đãi của từng gói.</p>
+          <p>Dung lượng, giá bán và ưu đãi đang hiệu lực của từng gói.</p>
         </div>
 
         <div className="actions">
@@ -42,71 +29,28 @@ function AdminPackagesPage() {
         </div>
       </div>
 
-      {notification && (
-        <div className="alert alert-success d-flex justify-content-between align-items-center mb-4">
-          <span>{notification}</span>
-          <button
-            type="button"
-            className="btn-close"
-            onClick={() => setNotification('')}
-            aria-label="Đóng"
-          />
-        </div>
-      )}
+      {/*
+        TODO(BACKEND): Chưa có API cấu hình gói nên đã gỡ nút "Cấu hình gói" và modal chỉnh sửa.
+        Cần API (role ADMIN) để: cập nhật dung lượng gói (có kiểm tra user đang dùng vượt hạn mức mới),
+        thêm dòng giá mới cho gói (basePrice, discountPercent, validFrom, validTo — backend lưu lịch sử
+        giá theo dòng, không sửa dòng cũ), và tạo / ngừng kích hoạt gói.
+      */}
 
-      {loading && plans.length === 0 ? (
-        <div className="panel p-5 text-center mb-4">
-          <div className="spinner-border text-primary mb-3" role="status">
-            <span className="visually-hidden">Đang tải...</span>
-          </div>
-          <p className="text-muted mb-0">Đang tải danh sách gói lưu trữ từ hệ thống...</p>
-        </div>
+      {loading ? (
+        <LoadingPanel message="Đang tải danh sách gói lưu trữ từ hệ thống..." />
       ) : error ? (
-        <div className="alert alert-danger d-flex justify-content-between align-items-center mb-4">
-          <div>
-            <strong>Lỗi tải gói lưu trữ:</strong> {error}
-          </div>
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-danger"
-            onClick={refetchPackages}
-          >
-            Thử lại
-          </button>
+        <ErrorAlert title="Lỗi tải gói lưu trữ:" message={error} onRetry={refetchPackages} />
+      ) : packages.length === 0 ? (
+        <div className="panel mb-4">
+          <EmptyState icon="card" title="Chưa có gói lưu trữ nào đang hoạt động" />
         </div>
       ) : (
         <div className="plan-grid mb-4">
-          {plans.map(plan => (
-            <PlanCard
-              key={plan.id}
-              plan={plan}
-              isAdmin={true}
-              onAction={handleEditPackage}
-            />
+          {packages.map(plan => (
+            <PlanCard key={plan.id} plan={plan} />
           ))}
         </div>
       )}
-
-      <div className="panel padded">
-        <div className="d-flex gap-3 align-items-start">
-          <span className="fileicon" style={{ marginTop: 2 }}>
-            <Icon name="card" />
-          </span>
-          <div>
-            <h3 className="mb-1">Cấu hình áp dụng cho toàn bộ tài khoản</h3>
-            <p className="small muted mb-0">
-              Ưu đãi được áp dụng khi mua gói trong thời gian còn hiệu lực. Hệ thống kiểm tra dung lượng đang dùng trước khi giảm hạn mức.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <EditPlanModal
-        isOpen={Boolean(selectedPlanForEdit)}
-        onClose={() => setSelectedPlanForEdit(null)}
-        plan={selectedPlanForEdit}
-        onSave={handleSavePackage}
-      />
     </div>
   );
 }

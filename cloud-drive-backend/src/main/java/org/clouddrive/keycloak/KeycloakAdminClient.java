@@ -8,6 +8,7 @@ import org.clouddrive.common.enums.UserStatus;
 import org.clouddrive.common.exception.InfoAlreadyExistsException;
 import org.clouddrive.common.exception.KeycloakIntegrationException;
 import org.clouddrive.common.exception.KeycloakUnavailableException;
+import org.clouddrive.common.exception.UserNotFoundException;
 import org.clouddrive.common.util.NameUtil;
 import org.clouddrive.keycloak.representation.RoleRepresentation;
 import org.clouddrive.keycloak.representation.UserRepresentation;
@@ -67,6 +68,7 @@ public class KeycloakAdminClient {
         return userId;
     }
 
+    // Cache theo role name tại đây, tạo 1 bean mới inject và gọi do @Cacheable không hoạt động trong cùng 1 class (Spring proxy)
     public RoleRepresentation getRealmRole(String roleName) {
         try {
             return keycloakAdminRestClient.get()
@@ -245,6 +247,35 @@ public class KeycloakAdminClient {
                             + ": " + ex.getResponseBodyAsString(),
                     ex
             );
+        } catch (ResourceAccessException ex) {
+            throw new KeycloakUnavailableException(
+                    "Không kết nối được tới Keycloak",
+                    ex
+            );
+        }
+    }
+
+    public void logoutUser(String keycloakUserId) {
+        try {
+            keycloakAdminRestClient.post()
+                    .uri("/users/{userId}/logout", keycloakUserId)
+                    .retrieve()
+                    .toBodilessEntity();
+
+        } catch (HttpClientErrorException.NotFound ex) {
+            throw new UserNotFoundException(
+                    "Không tìm thấy user " + keycloakUserId + " trên Keycloak"
+            );
+
+        } catch (RestClientResponseException ex) {
+            throw new KeycloakIntegrationException(
+                    "Keycloak trả về " + ex.getStatusCode()
+                            + " khi logout user "
+                            + keycloakUserId
+                            + ": " + ex.getResponseBodyAsString(),
+                    ex
+            );
+
         } catch (ResourceAccessException ex) {
             throw new KeycloakUnavailableException(
                     "Không kết nối được tới Keycloak",

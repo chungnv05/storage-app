@@ -17,11 +17,13 @@ spring:
     properties:
       hibernate:
         format_sql: true
+    open-in-view: false
 
   cache:
     type: caffeine
     cache-names:
       - storage-packages
+      - user-roles
     caffeine:
       spec: maximumSize=10,expireAfterWrite=30m
 

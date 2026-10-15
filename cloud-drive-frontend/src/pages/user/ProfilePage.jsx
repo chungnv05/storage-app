@@ -1,243 +1,186 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import Icon from '../../components/common/Icon.jsx';
 import Avatar from '../../components/common/Avatar.jsx';
-import useStorage from '../../hooks/useStorage.js';
-import { formatSize } from '../../mock/utils.js';
+import { LoadingPanel, ErrorAlert, SuccessAlert } from '../../components/common/PageStatus.jsx';
+import { formatSize } from '../../utils/format.js';
 
-function ProfilePage() {
-  const { currentUser, getPlan, getUserUsedBytes, updateProfile, changePassword, changeAvatar, toast } = useStorage();
-  const navigate = useNavigate();
+// Cùng ràng buộc với UserRequest ở backend (full_name trong DB tối đa 100 ký tự).
+const PHONE_PATTERN = /^\+?[0-9]{9,15}$/;
+const FULL_NAME_MAX = 100;
 
-  const [name, setName] = useState(currentUser.name || '');
+function ProfileForm({ currentUser, onSave }) {
+  const [fullName, setFullName] = useState(currentUser.fullName || '');
   const [email, setEmail] = useState(currentUser.email || '');
   const [phone, setPhone] = useState(currentUser.phone || '');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
 
-  const [oldPassword, setOldPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-
-  const plan = getPlan(currentUser.plan);
-  const used = getUserUsedBytes(currentUser.id);
-
-  const handleUpdateProfile = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim()) {
-      toast('Vui lòng nhập họ và tên.');
-      return;
-    }
-    updateProfile({ name, email, phone });
-  };
+    setError(null);
 
-  const handleChangePassword = (e) => {
-    e.preventDefault();
-    if (newPassword.length < 8) {
-      toast('Mật khẩu mới phải có ít nhất 8 ký tự.');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      toast('Mật khẩu nhập lại không khớp.');
-      return;
-    }
-    const success = changePassword(oldPassword, newPassword);
-    if (success) {
-      setOldPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-    }
-  };
-
-  const handleAvatarFile = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 2e6) {
-      toast('Vui lòng chọn ảnh định dạng JPG, PNG hoặc WebP tối đa 2 MB.');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = 160;
-        canvas.height = 160;
-        const s = Math.min(img.width, img.height);
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(
-          img,
-          (img.width - s) / 2,
-          (img.height - s) / 2,
-          s,
-          s,
-          0,
-          0,
-          160,
-          160
-        );
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-        changeAvatar(dataUrl);
-      };
-      img.src = reader.result;
+    const fields = {
+      fullName: fullName.trim(),
+      email: email.trim(),
+      phone: phone.trim() || null
     };
-    reader.readAsDataURL(file);
+
+    const errors = {};
+    if (!fields.fullName) errors.fullName = 'Vui lòng nhập họ và tên.';
+    if (!fields.email) errors.email = 'Vui lòng nhập email.';
+    if (fields.phone && !PHONE_PATTERN.test(fields.phone)) errors.phone = 'Số điện thoại không hợp lệ.';
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
+    setSubmitting(true);
+    try {
+      await onSave(fields);
+    } catch (err) {
+      setError(err.message);
+      setFieldErrors(err.fieldErrors || {});
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  return (
+    <form onSubmit={handleSubmit} noValidate>
+      {error && (
+        <div className="alert alert-danger py-2 small mb-3">{error}</div>
+      )}
+
+      <div className="form-field">
+        <label className="form-label" htmlFor="profile-name">
+          Họ và tên
+        </label>
+        <input
+          id="profile-name"
+          className={`form-control ${fieldErrors.fullName ? 'is-invalid' : ''}`}
+          type="text"
+          required
+          maxLength={FULL_NAME_MAX}
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+        />
+        {fieldErrors.fullName && <div className="invalid-feedback">{fieldErrors.fullName}</div>}
+      </div>
+
+      <div className="form-field">
+        <label className="form-label" htmlFor="profile-email">
+          Email
+        </label>
+        <input
+          id="profile-email"
+          className={`form-control ${fieldErrors.email ? 'is-invalid' : ''}`}
+          type="email"
+          required
+          maxLength={255}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        {fieldErrors.email && <div className="invalid-feedback">{fieldErrors.email}</div>}
+      </div>
+
+      <div className="form-field">
+        <label className="form-label" htmlFor="profile-phone">
+          Số điện thoại
+        </label>
+        <input
+          id="profile-phone"
+          className={`form-control ${fieldErrors.phone ? 'is-invalid' : ''}`}
+          type="tel"
+          placeholder="Ví dụ: 0901234567"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+        />
+        {fieldErrors.phone && <div className="invalid-feedback">{fieldErrors.phone}</div>}
+      </div>
+
+      <button type="submit" className="btn btn-primary mt-2" disabled={submitting}>
+        {submitting ? (
+          <>
+            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
+            Đang lưu...
+          </>
+        ) : (
+          'Lưu thay đổi'
+        )}
+      </button>
+    </form>
+  );
+}
+
+function ProfilePage() {
+  const { currentUser, loading, error, refetch, updateProfile } = useOutletContext();
+  const navigate = useNavigate();
+  // Đặt ở trang (không ở form) vì form được khởi tạo lại sau khi lưu.
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = async (fields) => {
+    setSaved(false);
+    await updateProfile(fields);
+    setSaved(true);
+  };
+
+  if (!currentUser) {
+    return loading
+      ? <LoadingPanel message="Đang tải thông tin tài khoản..." />
+      : <ErrorAlert message={error} onRetry={refetch} />;
+  }
 
   return (
     <div className="profile-page">
       <div className="pagehead">
         <div>
           <h1 className="mb-0">Thông tin cá nhân</h1>
-          <p>Quản lý hồ sơ và bảo mật tài khoản của bạn.</p>
+          <p>Quản lý hồ sơ tài khoản của bạn.</p>
         </div>
       </div>
 
       <div className="account-grid">
-        {/* Left Column: Profile form */}
         <section className="panel padded">
           <h2 className="mb-4">Hồ sơ của bạn</h2>
 
+          {/*
+            TODO(BACKEND): Chưa có API đổi ảnh đại diện. Cần API upload ảnh (multipart) để cập nhật
+            avatarUrl của user; UserResponse đã có trường avatarUrl để hiển thị.
+          */}
           <div className="d-flex align-items-center gap-3 mb-4">
             <Avatar user={currentUser} size="large" />
-
-            <div>
-              <label className="btn btn-light" htmlFor="avatar-upload" style={{ cursor: 'pointer' }}>
-                <Icon name="image" /> Thay ảnh đại diện
-              </label>
-              <input
-                id="avatar-upload"
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="d-none"
-                onChange={handleAvatarFile}
-              />
-              <p className="small muted mt-2 mb-0">
-                JPG, PNG hoặc WebP · Tối đa 2 MB
-              </p>
-            </div>
           </div>
 
-          <form onSubmit={handleUpdateProfile}>
-            <div className="form-field">
-              <label className="form-label" htmlFor="profile-name">
-                Họ và tên
-              </label>
-              <input
-                id="profile-name"
-                className="form-control"
-                type="text"
-                required
-                maxLength={80}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </div>
+          {saved && (
+            <SuccessAlert message="Đã cập nhật thông tin cá nhân." onClose={() => setSaved(false)} />
+          )}
 
-            <div className="form-field">
-              <label className="form-label" htmlFor="profile-email">
-                Email
-              </label>
-              <input
-                id="profile-email"
-                className="form-control"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-
-            <div className="form-field">
-              <label className="form-label" htmlFor="profile-phone">
-                Số điện thoại
-              </label>
-              <input
-                id="profile-phone"
-                className="form-control"
-                type="tel"
-                placeholder="Ví dụ: 0901234567"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
-            </div>
-
-            <button type="submit" className="btn btn-primary mt-2">
-              Lưu thay đổi
-            </button>
-          </form>
+          {/* key: khởi tạo lại form theo dữ liệu mới nhất sau khi lưu thành công */}
+          <ProfileForm
+            key={`${currentUser.fullName}|${currentUser.email}|${currentUser.phone}`}
+            currentUser={currentUser}
+            onSave={handleSave}
+          />
         </section>
 
-        {/* Right Column: Change Password & Storage Plan */}
         <div>
-          <section className="panel padded mb-4">
-            <h2 className="mb-4">Đổi mật khẩu</h2>
-
-            <form onSubmit={handleChangePassword}>
-              <div className="form-field">
-                <label className="form-label" htmlFor="old-password">
-                  Mật khẩu hiện tại
-                </label>
-                <input
-                  id="old-password"
-                  className="form-control"
-                  type="password"
-                  required
-                  placeholder="Mật khẩu hiện tại"
-                  value={oldPassword}
-                  onChange={(e) => setOldPassword(e.target.value)}
-                />
-              </div>
-
-              <div className="form-field">
-                <label className="form-label" htmlFor="new-password">
-                  Mật khẩu mới
-                </label>
-                <input
-                  id="new-password"
-                  className="form-control"
-                  type="password"
-                  required
-                  minLength={8}
-                  placeholder="Tối thiểu 8 ký tự"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                />
-              </div>
-
-              <div className="form-field">
-                <label className="form-label" htmlFor="confirm-new-password">
-                  Nhập lại mật khẩu mới
-                </label>
-                <input
-                  id="confirm-new-password"
-                  className="form-control"
-                  type="password"
-                  required
-                  minLength={8}
-                  placeholder="Nhập lại mật khẩu mới"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                />
-              </div>
-
-              <button type="submit" className="btn btn-light mt-2">
-                <Icon name="lock" /> Cập nhật mật khẩu
-              </button>
-            </form>
-          </section>
+          {/*
+            TODO(BACKEND): Chưa có API đổi mật khẩu. Mật khẩu do Keycloak quản lý; cần API backend
+            (gọi Keycloak Admin API, có xác thực mật khẩu hiện tại) hoặc quyết định dùng trang
+            Account Console của Keycloak trước khi dựng lại form đổi mật khẩu.
+          */}
 
           <section className="panel padded">
-            <h3 className="mb-2">Gói {plan.name}</h3>
+            <h3 className="mb-2">Gói {currentUser.packageName}</h3>
             <p className="small muted mb-3">
-              Đang dùng {formatSize(used)} / {plan.gb} GB
+              Đang dùng {formatSize(currentUser.storageUsedBytes)} / {formatSize(currentUser.storageLimitBytes)}
             </p>
             <button
               type="button"
               className="btn btn-outline-primary"
               onClick={() => navigate('/plans')}
             >
-              Quản lý gói <Icon name="arrow" />
+              Xem các gói <Icon name="arrow" />
             </button>
           </section>
         </div>

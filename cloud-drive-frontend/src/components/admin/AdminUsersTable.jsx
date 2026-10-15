@@ -3,12 +3,10 @@ import Icon from '../common/Icon.jsx';
 import Avatar from '../common/Avatar.jsx';
 import Badge from '../common/Badge.jsx';
 import EmptyState from '../common/EmptyState.jsx';
-import useStorage from '../../hooks/useStorage.js';
-import { formatSize, GB } from '../../mock/utils.js';
+import { formatSize, usagePercent, packageBadgeVariant } from '../../utils/format.js';
 
+/** `users` là danh sách UserResponse từ GET /api/admin/users. */
 function AdminUsersTable({ users, onSelectUser, onBlockToggle }) {
-  const { getPlan, getUserUsedBytes } = useStorage();
-
   if (!users || users.length === 0) {
     return (
       <div className="panel">
@@ -36,23 +34,8 @@ function AdminUsersTable({ users, onSelectUser, onBlockToggle }) {
           </thead>
           <tbody>
             {users.map(u => {
-              const plan = getPlan(u.plan);
-              const planName = u.packageName || plan?.name || 'Free';
-              const used = u.storageUsedBytes !== undefined ? u.storageUsedBytes : getUserUsedBytes(u.id);
-              const totalBytes = u.storageLimitBytes || (plan?.gb ? plan.gb * GB : 5 * GB);
-              const totalGb = u.storageLimitBytes
-                ? Math.round(u.storageLimitBytes / (1024 * 1024 * 1024))
-                : (plan?.gb || 0);
-              const percent = totalBytes > 0 ? Math.min(100, Math.round((used / totalBytes) * 100)) : 0;
-
-              const planKey = (u.packageName || plan?.name || u.plan || '').toLowerCase();
-              const badgeVariant = planKey.includes('pro')
-                ? 'purple'
-                : (planKey.includes('premium') || planKey.includes('plus'))
-                  ? 'blue'
-                  : 'gray';
-
-              const isBlocked = u.blocked || u.status === 'LOCKED';
+              const percent = usagePercent(u.storageUsedBytes, u.storageLimitBytes);
+              const isBlocked = u.status === 'LOCKED';
 
               return (
                 <tr key={u.id}>
@@ -65,7 +48,7 @@ function AdminUsersTable({ users, onSelectUser, onBlockToggle }) {
                           className="file-name"
                           onClick={() => onSelectUser(u)}
                         >
-                          {u.name || u.fullName}
+                          {u.fullName || u.email}
                         </button>
                         <div className="small muted mt-1">{u.email}</div>
                       </div>
@@ -73,15 +56,15 @@ function AdminUsersTable({ users, onSelectUser, onBlockToggle }) {
                   </td>
 
                   <td>
-                    <Badge variant={badgeVariant}>
-                      {planName}
+                    <Badge variant={packageBadgeVariant(u.packageName)}>
+                      {u.packageName}
                     </Badge>
                   </td>
 
                   <td style={{ minWidth: '160px' }}>
                     <div className="small mb-2">
-                      {formatSize(used)}{' '}
-                      <span className="muted">/ {totalGb} GB</span>
+                      {formatSize(u.storageUsedBytes)}{' '}
+                      <span className="muted">/ {formatSize(u.storageLimitBytes)}</span>
                     </div>
                     <div className="progress">
                       <div
@@ -111,7 +94,7 @@ function AdminUsersTable({ users, onSelectUser, onBlockToggle }) {
                         type="button"
                         className="iconbtn"
                         title={isBlocked ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
-                        aria-label={`${isBlocked ? 'Mở khóa' : 'Khóa'} ${u.name || u.fullName}`}
+                        aria-label={`${isBlocked ? 'Mở khóa' : 'Khóa'} ${u.fullName || u.email}`}
                         onClick={() => onBlockToggle(u)}
                       >
                         <Icon name={isBlocked ? 'refresh' : 'lock'} />

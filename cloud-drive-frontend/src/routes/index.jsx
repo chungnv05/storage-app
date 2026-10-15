@@ -15,6 +15,7 @@ import AdminDashboardPage from '../pages/admin/AdminDashboardPage.jsx';
 import AdminUsersPage from '../pages/admin/AdminUsersPage.jsx';
 import AdminPlansPage from '../pages/admin/AdminPackagesPage.jsx';
 import AdminBroadcastPage from '../pages/admin/AdminBroadcastPage.jsx';
+import AdminProfilePage from '../pages/admin/AdminProfilePage.jsx';
 
 import ProtectedRoute from '../auth/ProtectedRoute.jsx';
 import UnauthorizedPage from '../pages/error/UnauthorizedPage.jsx';
@@ -85,7 +86,7 @@ function AppRoutes() {
         <Route path="users" element={<AdminUsersPage />} />
         <Route path="plans" element={<AdminPlansPage />} />
         <Route path="broadcast" element={<AdminBroadcastPage />} />
-        <Route path="profile" element={<ProfilePage />} />
+        <Route path="profile" element={<AdminProfilePage />} />
       </Route>
 
       {/* Catch-all */}

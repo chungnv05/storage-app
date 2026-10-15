@@ -1,11 +1,7 @@
 import React from 'react';
 import Icon from '../common/Icon.jsx';
-import Badge from '../common/Badge.jsx';
-import useStorage from '../../hooks/useStorage.js';
 
-function AdminTopbar({ onToggleMenu }) {
-  const { searchQuery, setSearchQuery } = useStorage();
-
+function AdminTopbar({ onToggleMenu, searchQuery, onSearchChange }) {
   return (
     <header className="topbar">
       <button
@@ -24,7 +20,7 @@ function AdminTopbar({ onToggleMenu }) {
           aria-label="Tìm kiếm người dùng"
           placeholder="Tìm người dùng theo tên hoặc email…"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => onSearchChange(e.target.value)}
         />
       </div>
 

@@ -1,19 +1,16 @@
 import React from 'react';
+import { formatSize } from '../../utils/format.js';
 
 const PALETTE = ['#a9bfcd', '#21899a', '#244860', '#5e72e4', '#11cdef', '#2dce89', '#fb6340'];
 
+/**
+ * Phân bổ user theo gói. UserResponse chỉ có packageName (không có packageId)
+ * nên đếm theo tên gói.
+ */
 function DonutChart({ plans = [], users = [] }) {
   const total = users.length;
 
-  const counts = plans.map(p =>
-    users.filter(u => {
-      const matchId = u.plan === p.id || u.packageId === p.id;
-      const matchName =
-        (u.packageName && u.packageName.toLowerCase() === p.name.toLowerCase()) ||
-        (u.plan && String(u.plan).toLowerCase() === p.name.toLowerCase());
-      return matchId || matchName;
-    }).length
-  );
+  const counts = plans.map(p => users.filter(u => u.packageName === p.name).length);
 
   let gradientStyle;
   if (total === 0) {
@@ -62,7 +59,7 @@ function DonutChart({ plans = [], users = [] }) {
             <div key={p.id} className="legend-row">
               <span className="swatch" style={{ background: color }} />
               <span>
-                {p.name} · {p.gb} GB
+                {p.name} · {formatSize(p.storageLimitBytes)}
               </span>
               <b>{count}</b>
               <span className="muted">{pct}%</span>

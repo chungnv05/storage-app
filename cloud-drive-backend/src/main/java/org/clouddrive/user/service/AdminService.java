@@ -2,6 +2,7 @@ package org.clouddrive.user.service;
 
 import org.clouddrive.common.enums.Role;
 import org.clouddrive.common.enums.UserStatus;
+import org.clouddrive.common.exception.ForbiddenException;
 import org.clouddrive.common.exception.UserNotFoundException;
 import org.clouddrive.keycloak.KeycloakAdminClient;
 import org.clouddrive.keycloak.representation.UserRepresentation;
@@ -60,15 +61,23 @@ public class AdminService {
         );
     }
 
-    public void updateUserStatus(Long userId, UserStatus newStatus) {
+    public void updateUserStatus(String keycloakAdminId, Long userId, UserStatus newStatus) {
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Không tìm thấy user!"));
+
+        if (keycloakAdminId.equals(user.getKeycloakUserId())) {
+            throw new ForbiddenException("Không thể thay đổi trạng thái của chính mình!");
+        }
 
         boolean enabled = toKeycloakEnabled(newStatus);
 
         keycloakAdminClient.updateUserStatus(
                 user.getKeycloakUserId(),
                 enabled
+        );
+        keycloakAdminClient.logoutUser(
+                user.getKeycloakUserId()
         );
 
         try {

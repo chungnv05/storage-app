@@ -6,6 +6,8 @@ import org.clouddrive.packages.service.StoragePackageService;
 import org.clouddrive.user.dto.StatResponse;
 import org.clouddrive.user.dto.UserResponse;
 import org.clouddrive.user.service.AdminService;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -37,8 +39,10 @@ public class AdminController {
     }
 
     @PutMapping("/users/{userId}/status")
-    public void updateUserStatus(@PathVariable Long userId, @RequestParam UserStatus status) {
-        adminService.updateUserStatus(userId, status);
+    public void updateUserStatus(@AuthenticationPrincipal Jwt jwt,
+                                 @PathVariable Long userId,
+                                 @RequestParam UserStatus status) {
+        adminService.updateUserStatus(jwt.getSubject(), userId, status);
     }
 
 

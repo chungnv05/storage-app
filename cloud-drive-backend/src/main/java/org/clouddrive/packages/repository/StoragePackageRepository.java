@@ -27,6 +27,8 @@ public interface StoragePackageRepository extends JpaRepository<StoragePackage, 
     JOIN PackagePricing pp
         ON pp.storagePackage = p
     WHERE p.active = true
+    AND pp.validFrom <= CURRENT_DATE
+    AND (pp.validTo IS NULL OR pp.validTo >= CURRENT_DATE)
 """)
     List<StoragePackageResponse> findAllActivePackagesWithPrice();
 }

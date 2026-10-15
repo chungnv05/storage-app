@@ -1,5 +1,6 @@
 package org.clouddrive.user.service;
 
+import org.clouddrive.common.exception.InfoAlreadyExistsException;
 import org.clouddrive.common.exception.UserNotFoundException;
 import org.clouddrive.keycloak.KeycloakAdminClient;
 import org.clouddrive.user.dto.UserRequest;
@@ -31,25 +32,44 @@ public class UserService {
     }
 
     public void updateUserInfo(String keycloakUserId, UserRequest userRequest) {
+
+        if (userRepository.existsByEmail(userRequest.getEmail())) {
+            throw new InfoAlreadyExistsException(
+                    "Email đã tồn tại!"
+            );
+        }
+
         User user = userRepository.findByKeycloakUserId(keycloakUserId)
                 .orElseThrow(() -> new UserNotFoundException(
                         "Không tìm thấy user!"
                 ));
-        String fullName = user.getFullName();
-        String email = user.getEmail();
-        String phone = user.getPhone();
+        String oldFullName = user.getFullName();
+        String oldEmail = user.getEmail();
+        String oldPhone = user.getPhone();
 
-        keycloakAdminClient.updateUser(keycloakUserId, userRequest.getFullName(), userRequest.getEmail(), userRequest.getPhone());
+        String newFullName = userRequest.getFullName();
+        String newEmail = userRequest.getEmail();
+        String newPhone = userRequest.getPhone();
+
+        if (newFullName.isEmpty()) {
+            newFullName = oldFullName;
+        }
+        if (newEmail.isEmpty()) {
+            newEmail = oldEmail;
+        }
+        if (newPhone.isEmpty()) {
+            newPhone = oldPhone;
+        }
 
 
         try {
-            user.setFullName(userRequest.getFullName());
-            user.setEmail(userRequest.getEmail());
-            user.setPhone(userRequest.getPhone());
+            user.setFullName(newFullName);
+            user.setEmail(newEmail);
+            user.setPhone(newPhone);
             userRepository.saveAndFlush(user);
         } catch (Exception e) {
             // Nếu cập nhật vào database thất bại, rollback lại thông tin trên Keycloak
-            keycloakAdminClient.updateUser(keycloakUserId, fullName, email, phone);
+            keycloakAdminClient.updateUser(keycloakUserId, oldFullName, oldEmail, oldPhone);
             throw e;
         }
     }

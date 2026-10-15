@@ -7,10 +7,12 @@ import UserStatusCard from '../../components/admin/UserStatusCard.jsx';
 import AdminUsersTable from '../../components/admin/AdminUsersTable.jsx';
 import UserDetailModal from '../../components/admin/UserDetailModal.jsx';
 import BlockUserModal from '../../components/admin/BlockUserModal.jsx';
+import { LoadingPanel, ErrorAlert, SuccessAlert } from '../../components/common/PageStatus.jsx';
 import usePackages from '../../hooks/usePackages.js';
 import useAdminUsers from '../../hooks/useAdminUsers.js';
 import useAdminStats from '../../hooks/useAdminStats.js';
-import { formatSize, formatMoney, formatDate } from '../../mock/utils.js';
+import adminApi from '../../api/adminApi.js';
+import { formatDate } from '../../utils/format.js';
 
 function AdminDashboardPage() {
   const {
@@ -21,7 +23,7 @@ function AdminDashboardPage() {
   } = useAdminStats();
 
   const {
-    users = [],
+    users,
     loading: loadingUsers,
     error: errorUsers,
     updateUserStatus,
@@ -29,11 +31,11 @@ function AdminDashboardPage() {
   } = useAdminUsers();
 
   const {
-    plans = [],
-    loading: loadingPlans,
-    error: errorPlans,
-    refetchPlans
-  } = usePackages();
+    packages,
+    loading: loadingPackages,
+    error: errorPackages,
+    refetchPackages
+  } = usePackages(adminApi.getAllPackages);
 
   const navigate = useNavigate();
 
@@ -46,59 +48,37 @@ function AdminDashboardPage() {
     return users.find(u => u.id === selectedUserForDetail.id) || selectedUserForDetail;
   }, [selectedUserForDetail, users]);
 
-  // Use stats from API /api/admin/stats, with fallback to users calculations
-  const totalUsers = stats ? stats.totalUsers : users.length;
-  const activeCount = stats ? stats.activeUsers : users.filter(u => !u.blocked).length;
-  const paidUsersCount = stats
-    ? stats.paidUsers
-    : users.filter(u => (u.packageName || u.plan || '').toLowerCase() !== 'free').length;
-
-  const totalBytes = stats
-    ? stats.storageUsedBytes
-    : users.reduce((acc, u) => acc + (u.storageUsedBytes || 0), 0);
-
-  const totalCapacity = stats
-    ? stats.storageLimitBytes
-    : users.reduce((acc, u) => acc + (u.storageLimitBytes || 0), 0);
-
-  const totalPaid = stats
-    ? stats.totalPaidAmount
-    : users.reduce((acc, u) => acc + (u.paid || 0), 0);
-
   const recentUsers = useMemo(() => {
     return [...users]
-      .sort((a, b) => (b.created || 0) - (a.created || 0))
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
       .slice(0, 5);
   }, [users]);
 
   const [currentDate] = useState(() => formatDate(Date.now()));
 
   const handleRefresh = () => {
-    if (refetchStats) refetchStats();
-    if (refetchUsers) refetchUsers();
-    if (refetchPlans) refetchPlans();
+    refetchStats();
+    refetchUsers();
+    refetchPackages();
   };
 
   const handleConfirmStatusChange = async (userId, targetStatus) => {
-    const result = await updateUserStatus(userId, targetStatus);
-    if (result && result.success) {
-      const isLocked = (result.status || targetStatus) === 'LOCKED';
-      setNotification(isLocked ? 'Đã khóa tài khoản thành công.' : 'Đã mở khóa tài khoản thành công.');
-      setTimeout(() => setNotification(''), 4000);
-      if (refetchStats) refetchStats();
-    }
-    return result;
+    await updateUserStatus(userId, targetStatus);
+    setNotification(targetStatus === 'LOCKED' ? 'Đã khóa tài khoản thành công.' : 'Đã mở khóa tài khoản thành công.');
+    // Số tài khoản đang hoạt động thay đổi theo trạng thái vừa cập nhật.
+    refetchStats();
   };
 
-  const isLoading = (loadingStats && !stats) && ((loadingUsers || loadingPlans) && users.length === 0);
-  const errorMessage = errorStats || errorUsers || errorPlans;
+  // Không che cả trang khi chỉ làm mới stats sau khi khóa/mở khóa tài khoản.
+  const isLoading = (loadingStats && !stats) || loadingUsers || loadingPackages;
+  const errorMessage = errorStats || errorUsers || errorPackages;
 
   return (
     <div className="admin-dashboard-page">
       <div className="pagehead">
         <div>
           <h1 className="mb-0">Tổng quan hệ thống</h1>
-          <p>Theo dõi người dùng và hoạt động lưu trữ.</p>
+          <p>Theo dõi người dùng và gói lưu trữ.</p>
         </div>
 
         <div className="actions d-flex gap-2 align-items-center">
@@ -117,103 +97,46 @@ function AdminDashboardPage() {
       </div>
 
       {notification && (
-        <div className="alert alert-success d-flex justify-content-between align-items-center mb-4">
-          <span>{notification}</span>
-          <button
-            type="button"
-            className="btn-close"
-            onClick={() => setNotification('')}
-            aria-label="Đóng"
-          />
-        </div>
+        <SuccessAlert message={notification} onClose={() => setNotification('')} />
       )}
 
       {isLoading ? (
-        <div className="panel p-5 text-center mb-4">
-          <div className="spinner-border text-primary mb-3" role="status">
-            <span className="visually-hidden">Đang tải...</span>
-          </div>
-          <p className="text-muted mb-0">Đang tải thông tin tổng quan hệ thống...</p>
-        </div>
+        <LoadingPanel message="Đang tải thông tin tổng quan hệ thống..." />
       ) : errorMessage ? (
-        <div className="alert alert-danger d-flex justify-content-between align-items-center mb-4">
-          <div>
-            <strong>Lỗi tải dữ liệu:</strong> {errorMessage}
-          </div>
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-danger"
-            onClick={handleRefresh}
-          >
-            Thử lại
-          </button>
-        </div>
+        <ErrorAlert message={errorMessage} onRetry={handleRefresh} />
       ) : (
         <>
-          {/* 4 Metric Cards */}
+          {/*
+            TODO(BACKEND): Đã gỡ các thẻ "Người dùng trả phí", "Dung lượng đã dùng" và "Tổng đã thanh toán".
+            GET /api/admin/stats có trả paidUsers, storageUsedBytes, storageLimitBytes, totalPaidAmount
+            nhưng AdminService.getStats đang gán cứng các giá trị này bằng 0 ("xử lý sau").
+            Cần backend tính thật: số user đang dùng gói trả phí, tổng dung lượng đã dùng / đã cấp
+            của toàn hệ thống, và tổng doanh thu từ thanh toán — rồi mới hiển thị lại các thẻ này.
+          */}
           <div className="cards mb-4">
             <StatCard
               label="Tổng người dùng"
-              value={totalUsers}
-              subtext={`${activeCount} tài khoản đang hoạt động`}
+              value={stats.totalUsers}
+              subtext={`${stats.activeUsers} tài khoản đang hoạt động`}
               icon="users"
               iconColor="#2563eb"
               iconBg="#eff6ff"
             />
-
-            <StatCard
-              label="Người dùng trả phí"
-              value={paidUsersCount}
-              subtext={
-                paidUsersCount > 0
-                  ? `${paidUsersCount} tài khoản đang dùng gói nâng cao`
-                  : 'Chưa có tài khoản trả phí'
-              }
-              icon="card"
-              iconColor="#7c3aed"
-              iconBg="#f5f3ff"
-            />
-
-            <StatCard
-              label="Dung lượng đã dùng"
-              value={formatSize(totalBytes)}
-              subtext={
-                totalCapacity > 0
-                  ? `Trên tổng số ${formatSize(totalCapacity)} được cấp`
-                  : 'Chưa có dung lượng được cấp'
-              }
-              icon="cloud"
-              iconColor="#0284c7"
-              iconBg="#f0f9ff"
-              progress={totalCapacity > 0 ? Math.round((totalBytes / totalCapacity) * 100) : 0}
-              progressBarColor="#0284c7"
-            />
-
-            <StatCard
-              label="Tổng đã thanh toán"
-              value={formatMoney(totalPaid)}
-              subtext="Lũy kế doanh thu hệ thống"
-              icon="chart"
-              iconColor="#10b981"
-              iconBg="#ecfdf5"
-            />
           </div>
 
-          {/* 2-column Charts */}
           <div className="admincols mb-4">
             <section className="panel chartpanel">
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <h2 className="mb-0">Người dùng theo gói</h2>
-                <span className="small muted">{totalUsers} tài khoản</span>
+                <span className="small muted">{users.length} tài khoản</span>
               </div>
 
-              <DonutChart plans={plans} users={users} />
+              <DonutChart plans={packages} users={users} />
             </section>
 
-            <UserStatusCard users={users} stats={stats} />
+            <UserStatusCard stats={stats} />
           </div>
 
-          {/* Recent Users Section */}
           <div className="sectionhead">
             <h2 className="mb-0">Người dùng gần đây</h2>
             <button
@@ -233,7 +156,6 @@ function AdminDashboardPage() {
         </>
       )}
 
-      {/* Modals */}
       <UserDetailModal
         isOpen={Boolean(selectedUserForDetail)}
         onClose={() => setSelectedUserForDetail(null)}

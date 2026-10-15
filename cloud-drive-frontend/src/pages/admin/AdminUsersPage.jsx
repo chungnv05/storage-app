@@ -1,15 +1,17 @@
 import React, { useState, useMemo } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import AdminUsersTable from '../../components/admin/AdminUsersTable.jsx';
 import UserDetailModal from '../../components/admin/UserDetailModal.jsx';
 import BlockUserModal from '../../components/admin/BlockUserModal.jsx';
 import Icon from '../../components/common/Icon.jsx';
+import { LoadingPanel, ErrorAlert, SuccessAlert } from '../../components/common/PageStatus.jsx';
 import useAdminUsers from '../../hooks/useAdminUsers.js';
-import useStorage from '../../hooks/useStorage.js';
 import usePackages from '../../hooks/usePackages.js';
+import adminApi from '../../api/adminApi.js';
 
 function AdminUsersPage() {
   const {
-    users = [],
+    users,
     loading: loadingUsers,
     error: errorUsers,
     updateUserStatus,
@@ -17,63 +19,43 @@ function AdminUsersPage() {
   } = useAdminUsers();
 
   const {
-    plans = [],
-    loading: loadingPlans,
-    error: errorPlans,
-    refetchPlans
-  } = usePackages();
+    packages,
+    loading: loadingPackages,
+    error: errorPackages,
+    refetchPackages
+  } = usePackages(adminApi.getAllPackages);
 
-  const { searchQuery: globalSearchQuery } = useStorage();
+  const { searchQuery: globalSearchQuery } = useOutletContext();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedPlanFilter, setSelectedPlanFilter] = useState('');
+  const [selectedPackageFilter, setSelectedPackageFilter] = useState('');
   const [selectedUserForDetail, setSelectedUserForDetail] = useState(null);
   const [selectedUserForBlock, setSelectedUserForBlock] = useState(null);
   const [notification, setNotification] = useState('');
 
+  // UserResponse chỉ có packageName (không có packageId) nên lọc theo tên gói.
   const filterPills = useMemo(() => {
     return [
       { value: '', label: 'Tất cả người dùng', count: users.length },
-      ...plans.map(p => {
-        const count = users.filter(u => {
-          const matchId = u.plan === p.id || u.packageId === p.id;
-          const matchName =
-            (u.packageName && u.packageName.toLowerCase() === p.name.toLowerCase()) ||
-            (u.plan && String(u.plan).toLowerCase() === p.name.toLowerCase());
-          return matchId || matchName;
-        }).length;
-
-        return {
-          value: p.id,
-          label: p.name,
-          count
-        };
-      })
+      ...packages.map(p => ({
+        value: p.name,
+        label: p.name,
+        count: users.filter(u => u.packageName === p.name).length
+      }))
     ];
-  }, [plans, users]);
+  }, [packages, users]);
 
   const filteredUsers = useMemo(() => {
     let list = users;
 
-    if (selectedPlanFilter !== '') {
-      const selectedPlanObj = plans.find(p => p.id === selectedPlanFilter);
-      const targetName = selectedPlanObj
-        ? selectedPlanObj.name.toLowerCase()
-        : String(selectedPlanFilter).toLowerCase();
-
-      list = list.filter(u => {
-        const matchId = u.plan === selectedPlanFilter || u.packageId === selectedPlanFilter;
-        const matchName =
-          (u.packageName && u.packageName.toLowerCase() === targetName) ||
-          (u.plan && String(u.plan).toLowerCase() === targetName);
-        return matchId || matchName;
-      });
+    if (selectedPackageFilter !== '') {
+      list = list.filter(u => u.packageName === selectedPackageFilter);
     }
 
     const effectiveSearch = (searchQuery || globalSearchQuery || '').toLowerCase().trim();
     if (effectiveSearch) {
       list = list.filter(u => {
-        const name = (u.name || u.fullName || '').toLowerCase();
+        const name = (u.fullName || '').toLowerCase();
         const email = (u.email || '').toLowerCase();
         const phone = (u.phone || '').toLowerCase();
         return (
@@ -85,7 +67,7 @@ function AdminUsersPage() {
     }
 
     return list;
-  }, [users, selectedPlanFilter, searchQuery, globalSearchQuery, plans]);
+  }, [users, selectedPackageFilter, searchQuery, globalSearchQuery]);
 
   const currentUserDetail = useMemo(() => {
     if (!selectedUserForDetail) return null;
@@ -93,18 +75,13 @@ function AdminUsersPage() {
   }, [selectedUserForDetail, users]);
 
   const handleRefresh = () => {
-    if (refetchUsers) refetchUsers();
-    if (refetchPlans) refetchPlans();
+    refetchUsers();
+    refetchPackages();
   };
 
   const handleConfirmStatusChange = async (userId, targetStatus) => {
-    const result = await updateUserStatus(userId, targetStatus);
-    if (result && result.success) {
-      const isLocked = (result.status || targetStatus) === 'LOCKED';
-      setNotification(isLocked ? 'Đã khóa tài khoản thành công.' : 'Đã mở khóa tài khoản thành công.');
-      setTimeout(() => setNotification(''), 4000);
-    }
-    return result;
+    await updateUserStatus(userId, targetStatus);
+    setNotification(targetStatus === 'LOCKED' ? 'Đã khóa tài khoản thành công.' : 'Đã mở khóa tài khoản thành công.');
   };
 
   return (
@@ -136,15 +113,7 @@ function AdminUsersPage() {
       </div>
 
       {notification && (
-        <div className="alert alert-success d-flex justify-content-between align-items-center mb-4">
-          <span>{notification}</span>
-          <button
-            type="button"
-            className="btn-close"
-            onClick={() => setNotification('')}
-            aria-label="Đóng"
-          />
-        </div>
+        <SuccessAlert message={notification} onClose={() => setNotification('')} />
       )}
 
       <div className="pills mb-4">
@@ -152,34 +121,18 @@ function AdminUsersPage() {
           <button
             key={value}
             type="button"
-            className={`pill ${selectedPlanFilter === value ? 'active' : ''}`}
-            onClick={() => setSelectedPlanFilter(value)}
+            className={`pill ${selectedPackageFilter === value ? 'active' : ''}`}
+            onClick={() => setSelectedPackageFilter(value)}
           >
             {label} <span className="ms-1 fw-normal">({count})</span>
           </button>
         ))}
       </div>
 
-      {(loadingUsers || loadingPlans) && users.length === 0 ? (
-        <div className="panel p-5 text-center">
-          <div className="spinner-border text-primary mb-3" role="status">
-            <span className="visually-hidden">Đang tải...</span>
-          </div>
-          <p className="text-muted mb-0">Đang tải danh sách người dùng từ hệ thống...</p>
-        </div>
-      ) : (errorUsers || errorPlans) ? (
-        <div className="alert alert-danger d-flex justify-content-between align-items-center mb-4">
-          <div>
-            <strong>Lỗi tải dữ liệu:</strong> {errorUsers || errorPlans}
-          </div>
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-danger"
-            onClick={handleRefresh}
-          >
-            Thử lại
-          </button>
-        </div>
+      {loadingUsers || loadingPackages ? (
+        <LoadingPanel message="Đang tải danh sách người dùng từ hệ thống..." />
+      ) : (errorUsers || errorPackages) ? (
+        <ErrorAlert message={errorUsers || errorPackages} onRetry={handleRefresh} />
       ) : (
         <AdminUsersTable
           users={filteredUsers}

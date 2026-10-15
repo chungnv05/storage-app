@@ -1,57 +1,50 @@
-import React, { useState } from 'react';
-import Icon from '../../components/common/Icon.jsx';
+import React from 'react';
+import { useOutletContext } from 'react-router-dom';
 import PlanCard from '../../components/storage/PlanCard.jsx';
-import BuyPlanModal from '../../components/storage/BuyPlanModal.jsx';
-import useStorage from '../../hooks/useStorage.js';
+import EmptyState from '../../components/common/EmptyState.jsx';
+import { LoadingPanel, ErrorAlert } from '../../components/common/PageStatus.jsx';
+import usePackages from '../../hooks/usePackages.js';
+import userApi from '../../api/userApi.js';
 
 function PlansPage() {
-  const { plans, buyPlan } = useStorage();
-  const [selectedPlanForBuy, setSelectedPlanForBuy] = useState(null);
-
-  const handleSelectPlan = (plan) => {
-    setSelectedPlanForBuy(plan);
-  };
+  const { currentUser } = useOutletContext();
+  const { packages, loading, error, refetchPackages } = usePackages(userApi.getPackages);
 
   return (
     <div className="plans-page">
       <div className="pagehead">
         <div>
           <h1 className="mb-0">Không gian phù hợp với bạn</h1>
-          <p>Chọn gói lưu trữ phù hợp. Có thể nâng cấp bất cứ lúc nào.</p>
+          <p>Các gói lưu trữ hiện có trên hệ thống.</p>
         </div>
       </div>
 
-      <div className="plan-grid mb-4">
-        {plans.map(plan => (
-          <PlanCard
-            key={plan.id}
-            plan={plan}
-            isAdmin={false}
-            onAction={handleSelectPlan}
-          />
-        ))}
-      </div>
+      {/*
+        TODO(BACKEND): Chưa có API mua / đổi gói dung lượng nên đã gỡ nút chọn gói và luồng thanh toán.
+        Cần API (role USER) tạo yêu cầu nâng cấp gói (packageId), xử lý thanh toán, kiểm tra
+        dung lượng đang dùng không vượt hạn mức gói mới, và cập nhật gói của user.
+      */}
 
-      <div className="panel padded">
-        <div className="d-flex gap-3 align-items-start">
-          <span className="fileicon" style={{ marginTop: 2 }}>
-            <Icon name="card" />
-          </span>
-          <div>
-            <h3 className="mb-1">Thông tin thanh toán</h3>
-            <p className="small muted mb-0">
-              Đây là luồng thanh toán mô phỏng, không thu tiền. Giá tính theo tháng; đổi gói sẽ thay thế hạn mức hiện tại, không cộng dồn dung lượng.
-            </p>
-          </div>
+      {loading ? (
+        <LoadingPanel message="Đang tải danh sách gói lưu trữ..." />
+      ) : error ? (
+        <ErrorAlert message={error} onRetry={refetchPackages} />
+      ) : packages.length === 0 ? (
+        <div className="panel">
+          <EmptyState icon="card" title="Chưa có gói lưu trữ nào" />
         </div>
-      </div>
-
-      <BuyPlanModal
-        isOpen={Boolean(selectedPlanForBuy)}
-        onClose={() => setSelectedPlanForBuy(null)}
-        plan={selectedPlanForBuy}
-        onConfirm={(planId) => buyPlan(planId)}
-      />
+      ) : (
+        <div className="plan-grid mb-4">
+          {packages.map(plan => (
+            <PlanCard
+              key={plan.id}
+              plan={plan}
+              // UserResponse chỉ có packageName (không có packageId) nên so khớp theo tên gói.
+              isCurrent={currentUser?.packageName === plan.name}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

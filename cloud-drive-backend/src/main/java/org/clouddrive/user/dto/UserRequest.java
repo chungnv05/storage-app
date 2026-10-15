@@ -7,7 +7,7 @@ import lombok.Data;
 
 @Data
 public class UserRequest {
-    @Size(max = 255, message = "Tên đầy đủ tối đa 255 ký tự")
+    @Size(max = 100, message = "Tên đầy đủ tối đa 100 ký tự")
     private String fullName;
 
     @Email(message = "Email không đúng định dạng")

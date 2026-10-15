@@ -1,118 +1,67 @@
-import { useState, useEffect, useCallback } from 'react';
-import adminApi from '../api/adminApi';
+import { useMemo } from 'react';
+import useApiQuery from './useApiQuery';
 
-function mapPackages(data) {
-  return Array.isArray(data)
-    ? data.map(p => {
-        const basePrice = Number(p.basePrice ?? p.price ?? 0);
-        const discountPercent = Number(p.discountPercent ?? p.discount ?? 0);
-        const gb = p.storageLimitBytes
-          ? Math.round(Number(p.storageLimitBytes) / (1024 * 1024 * 1024))
-          : (p.gb || 0);
-
-        return {
-          ...p,
-          id: p.id,
-          name: p.name,
-          storageLimitBytes: Number(p.storageLimitBytes) || 0,
-          gb,
-          basePrice,
-          price: basePrice,
-          discountPercent,
-          discount: discountPercent,
-          validFrom: p.validFrom || null,
-          validTo: p.validTo || null,
-          until: p.validTo ? String(p.validTo).split('T')[0] : (p.until || ''),
-          active: p.active !== undefined ? p.active : true
-        };
-      })
-    : [];
+/**
+ * Cùng quy ước với PackagePricing.isValidAt ở backend:
+ * validFrom tính là đã bao gồm, validTo không bao gồm, validTo null = vô thời hạn.
+ */
+function isPricingValidAt(row, moment) {
+  if (moment < new Date(row.validFrom)) return false;
+  return !row.validTo || moment < new Date(row.validTo);
 }
 
-export default function usePackages() {
-  const [plans, setPlans] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+/** Cùng công thức với PackagePricing.effectivePrice ở backend. */
+function effectivePrice(basePrice, discountPercent) {
+  return Math.round(basePrice * (1 - discountPercent / 100) * 100) / 100;
+}
 
-  const fetchPlans = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await adminApi.getAllPackages();
-      setPlans(mapPackages(data));
-    } catch (err) {
-      console.error('Lỗi khi tải danh sách gói lưu trữ:', err);
-      setError(err?.response?.data?.message || err?.message || 'Không thể tải danh sách gói lưu trữ');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+/**
+ * Backend trả mỗi dòng là một cặp (gói, dòng giá) và không lọc theo thời gian,
+ * nên một gói có thể xuất hiện nhiều lần. Gộp theo id và chỉ giữ dòng giá đang
+ * hiệu lực; `pricing` là null nếu gói chưa có dòng giá nào hiệu lực.
+ */
+function groupPackages(rows) {
+  const now = new Date();
+  const byId = new Map();
 
-  const updatePlan = useCallback((planId, updatedFields) => {
-    setPlans(prev =>
-      prev.map(p => {
-        if (p.id === planId) {
-          const newGb = updatedFields.gb !== undefined ? Number(updatedFields.gb) : p.gb;
-          const basePrice =
-            updatedFields.basePrice !== undefined
-              ? Number(updatedFields.basePrice)
-              : (updatedFields.price !== undefined ? Number(updatedFields.price) : p.basePrice);
-          const discountPercent =
-            updatedFields.discountPercent !== undefined
-              ? Number(updatedFields.discountPercent)
-              : (updatedFields.discount !== undefined ? Number(updatedFields.discount) : p.discountPercent);
-          const validTo =
-            updatedFields.validTo !== undefined
-              ? updatedFields.validTo
-              : (updatedFields.until !== undefined ? updatedFields.until : p.validTo);
-
-          return {
-            ...p,
-            ...updatedFields,
-            gb: newGb,
-            storageLimitBytes: newGb * (1024 * 1024 * 1024),
-            basePrice,
-            price: basePrice,
-            discountPercent,
-            discount: discountPercent,
-            validTo,
-            until: validTo ? String(validTo).split('T')[0] : ''
-          };
-        }
-        return p;
-      })
-    );
-    return true;
-  }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    adminApi
-      .getAllPackages()
-      .then(data => {
-        if (!isMounted) return;
-        setPlans(mapPackages(data));
-      })
-      .catch(err => {
-        if (!isMounted) return;
-        console.error('Lỗi khi tải danh sách gói lưu trữ:', err);
-        setError(err?.response?.data?.message || err?.message || 'Không thể tải danh sách gói lưu trữ');
-      })
-      .finally(() => {
-        if (isMounted) setLoading(false);
+  (rows || []).forEach(row => {
+    if (!byId.has(row.id)) {
+      byId.set(row.id, {
+        id: row.id,
+        name: row.name,
+        storageLimitBytes: Number(row.storageLimitBytes),
+        pricing: null
       });
+    }
 
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    if (isPricingValidAt(row, now)) {
+      const basePrice = Number(row.basePrice);
+      const discountPercent = Number(row.discountPercent);
+      byId.get(row.id).pricing = {
+        basePrice,
+        discountPercent,
+        effectivePrice: effectivePrice(basePrice, discountPercent),
+        validFrom: row.validFrom,
+        validTo: row.validTo
+      };
+    }
+  });
+
+  return [...byId.values()].sort((a, b) => a.storageLimitBytes - b.storageLimitBytes);
+}
+
+/**
+ * @param fetchPackages adminApi.getAllPackages hoặc userApi.getPackages
+ *   (hai endpoint trả cùng cấu trúc StoragePackageResponse[], khác quyền truy cập).
+ */
+export default function usePackages(fetchPackages) {
+  const { data, loading, error, refetch } = useApiQuery(fetchPackages);
+  const packages = useMemo(() => groupPackages(data), [data]);
 
   return {
-    plans,
+    packages,
     loading,
     error,
-    refetchPackages: fetchPlans,
-    updatePlan
+    refetchPackages: refetch
   };
 }

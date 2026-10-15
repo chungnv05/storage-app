@@ -1,24 +1,16 @@
 import React from 'react';
-import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import Icon from '../common/Icon.jsx';
 import Badge from '../common/Badge.jsx';
-import useStorage from '../../hooks/useStorage.js';
 import useAuth from '../../hooks/useAuth.js';
-import { formatSize, GB } from '../../mock/utils.js';
+import { formatSize, usagePercent } from '../../utils/format.js';
 
-function Sidebar({ isOpen, onClose }) {
-  const { currentUser, getPlan, getUserUsedBytes, notices } = useStorage();
+function Sidebar({ isOpen, onClose, currentUser }) {
   const { logout } = useAuth();
-  const navigate = useNavigate();
 
-  const plan = getPlan(currentUser.plan);
-  const usedBytes = getUserUsedBytes(currentUser.id);
-  const totalBytes = plan.gb * GB;
-  const usedPercent = Math.min(100, Math.round((usedBytes / totalBytes) * 100));
-
-  const unreadNoticesCount = notices.filter(n => n.to === currentUser.id && !n.read).length;
-
- 
+  const usedPercent = currentUser
+    ? usagePercent(currentUser.storageUsedBytes, currentUser.storageLimitBytes)
+    : 0;
 
   return (
     <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
@@ -59,6 +51,7 @@ function Sidebar({ isOpen, onClose }) {
           Thùng rác
         </NavLink>
 
+        {/* TODO(BACKEND): Hiển thị số thông báo chưa đọc khi có API đếm thông báo chưa đọc của user. */}
         <NavLink
           to="/notifications"
           className={({ isActive }) => `navlink ${isActive ? 'active' : ''}`}
@@ -66,9 +59,6 @@ function Sidebar({ isOpen, onClose }) {
         >
           <Icon name="bell" />
           Thông báo
-          {unreadNoticesCount > 0 && (
-            <span className="nav-count">{unreadNoticesCount}</span>
-          )}
         </NavLink>
       </nav>
 
@@ -99,31 +89,32 @@ function Sidebar({ isOpen, onClose }) {
         </button>
       </nav>
 
-      <div className="side-bottom">
-        <div className="storagebox">
-          <div className="d-flex justify-content-between align-items-center small mb-3">
-            <b>Dung lượng</b>
-            <Badge variant="blue">{plan.name}</Badge>
+      {currentUser && (
+        <div className="side-bottom">
+          <div className="storagebox">
+            <div className="d-flex justify-content-between align-items-center small mb-3">
+              <b>Dung lượng</b>
+              <Badge variant="blue">{currentUser.packageName}</Badge>
+            </div>
+            <div className="progress">
+              <div
+                className="progress-bar"
+                style={{ width: `${usedPercent}%` }}
+              />
+            </div>
+            <p className="small muted mt-2 mb-3">
+              {formatSize(currentUser.storageUsedBytes)} / {formatSize(currentUser.storageLimitBytes)} đã dùng ({usedPercent}%)
+            </p>
+            <Link
+              to="/plans"
+              className="btn btn-outline-primary w-100"
+              onClick={onClose}
+            >
+              Xem các gói dung lượng <Icon name="arrow" />
+            </Link>
           </div>
-          <div className="progress">
-            <div
-              className="progress-bar"
-              style={{ width: `${usedPercent}%` }}
-            />
-          </div>
-          <p className="small muted mt-2 mb-3">
-            {formatSize(usedBytes)} / {plan.gb} GB đã dùng ({usedPercent}%)
-          </p>
-          <Link
-            to="/plans"
-            className="btn btn-outline-primary w-100"
-            onClick={onClose}
-          >
-            Nâng cấp dung lượng <Icon name="arrow" />
-          </Link>
         </div>
-
-      </div>
+      )}
     </aside>
   );
 }

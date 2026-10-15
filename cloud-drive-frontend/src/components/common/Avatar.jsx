@@ -1,22 +1,23 @@
 import React from 'react';
 
+/** `user` có cấu trúc UserResponse của backend ({ fullName, email, avatarUrl, ... }). */
 function Avatar({ user, size = 'normal', style = {} }) {
   if (!user) {
     return <span className={`avatar ${size === 'large' ? 'large' : ''}`} style={style}>U</span>;
   }
 
-  if (user.avatar) {
+  if (user.avatarUrl) {
     return (
       <img
         className={`avatar ${size === 'large' ? 'large' : ''}`}
-        src={user.avatar}
-        alt={user.name || 'Ảnh đại diện'}
+        src={user.avatarUrl}
+        alt={user.fullName || 'Ảnh đại diện'}
         style={style}
       />
     );
   }
 
-  const name = user.name || user.username || 'Người dùng';
+  const name = user.fullName || user.email || 'Người dùng';
   const parts = name.trim().split(/\s+/);
   const initials = parts.slice(-2).map(p => p[0]?.toUpperCase()).join('') || 'U';
 

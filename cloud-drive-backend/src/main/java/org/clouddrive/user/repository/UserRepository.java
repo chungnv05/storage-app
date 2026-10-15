@@ -18,6 +18,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @EntityGraph(attributePaths = "storagePackage")
     Optional<User> findByKeycloakUserId(String keycloakUserId);
 
+    @EntityGraph(attributePaths = "storagePackage")
     List<User> findAllByRole(Role role);
     long countByRole(Role role);
     long countByRoleAndStatus(Role role, UserStatus status);

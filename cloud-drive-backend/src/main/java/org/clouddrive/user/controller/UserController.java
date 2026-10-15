@@ -1,5 +1,6 @@
 package org.clouddrive.user.controller;
 
+import jakarta.validation.Valid;
 import org.clouddrive.packages.dto.StoragePackageResponse;
 import org.clouddrive.packages.service.StoragePackageService;
 import org.clouddrive.user.dto.UserRequest;
@@ -38,7 +39,7 @@ public class UserController {
     }
 
     @PatchMapping("/me")
-    public void updateUserInfo(@AuthenticationPrincipal Jwt jwt, @RequestBody UserRequest userRequest) {
+    public void updateUserInfo(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody UserRequest userRequest) {
         userService.updateUserInfo(jwt.getSubject(), userRequest);
     }
 
